@@ -1,4 +1,8 @@
+__pycache__/
+# data directory (large images)
 data/
+# experiment outputs
 results/
 results_novelty/
+# zip artifacts
 *.zip
