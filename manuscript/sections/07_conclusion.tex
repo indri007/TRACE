@@ -1,0 +1,132 @@
+\section{Conclusion}
+\label{sec:conclusion}
+
+This paper evaluated YOLO26m, an NMS-free single-stage detector, on a
+publicly available three-class vehicle detection dataset (9\,725 images;
+\textit{bus}, \textit{car}, \textit{van}) exported from Roboflow Universe
+under CC~BY~4.0 \cite{roboflow_dataset}.
+We reported detection performance, latency, and a TIDE-style error
+taxonomy for the deployed checkpoint, documented a silent label-format
+corruption that affects training data assembled from mixed annotation
+sources, and demonstrated an end-to-end deployment pipeline on consumer
+Apple Silicon hardware.
+
+% -------------------------------------------------------------------------
+\subsection*{Summary of Findings}
+% -------------------------------------------------------------------------
+
+\begin{enumerate}
+
+  \item \textbf{YOLO26m achieves competitive accuracy on a heterogeneous
+    traffic dataset.}
+    The deployed checkpoint reaches mAP$_{50}$~=~0.784 and
+    mAP$_{50:95}$~=~0.594 on the held-out test split, with precision
+    0.845 and recall 0.752.
+    Per-class analysis shows that \textit{bus} and \textit{car} are
+    detected reliably (AP$_{50}$ 0.800 and 0.786, respectively), while
+    \textit{van} is harder due to visual overlap with \textit{car}
+    (AP$_{50}$ 0.766, dominant confusion pair: van$\rightarrow$car,
+    14 cases).
+
+  \item \textbf{Missed detections are the primary error mode.}
+    Of the 413 ground-truth instances in the test set, 78 (19\,\%) were
+    missed at a confidence threshold of 0.40.
+    Background false positives (22) and classification errors (23) are
+    secondary concerns.
+    The model's precision-recall profile suggests that the confidence
+    threshold can be tuned downward to improve recall at the cost of
+    additional false positives — a trade-off that depends on the
+    application.
+
+  \item \textbf{NMS-free inference eliminates post-processing latency.}
+    Post-processing contributes only 0.08\,ms per image; the total
+    end-to-end CPU latency is 99.1\,ms (10.1\,FPS), dominated by the
+    96.31\,ms forward pass.
+    At this throughput the system is suitable for frame-sampled analysis
+    or offline batch processing; MPS acceleration on the Apple M4 Pro is
+    expected to bring throughput above 20\,FPS.
+
+  \item \textbf{Mixed bounding-box/polygon label files are a silent
+    source of training corruption.}
+    Three of the 9\,218 training label files contained mixed-format rows.
+    Ultralytics~8.4.53 silently reinterprets these files entirely as
+    polygon annotations, producing incorrect bounding boxes without any
+    warning.
+    A lightweight token-count audit (released in
+    \texttt{trace\_experiments.py}) detects and corrects the problem in
+    seconds.
+
+  \item \textbf{The deployment pipeline integrates detection, logging, and
+    alerting on consumer hardware.}
+    The VehicleScope~AI Streamlit application, n8n webhook, Google Sheets
+    logger, and Telegram alerter form a complete, low-cost deployment
+    stack that runs without cloud GPU infrastructure.
+
+\end{enumerate}
+
+% -------------------------------------------------------------------------
+\subsection*{Future Work}
+% -------------------------------------------------------------------------
+
+The findings reported here are based on a single pre-trained checkpoint
+and exclude the planned re-training experiments.
+The following directions will complete and extend the study.
+
+\begin{description}
+
+  \item[Baseline comparison and augmentation ablation (Tables T8, T9).]
+    Training YOLO26m, YOLOv8m, YOLO11m, and RT-DETR-l from COCO weights
+    on the cleaned dataset, over three seeds, will provide a statistically
+    grounded comparison.
+    The augmentation ablation (photometric only vs.\ Ultralytics default
+    vs.\ photometric~+ light geometric) will quantify the sensitivity of
+    YOLO26m to data augmentation choices.
+
+  \item[Quantifying the label-fix effect.]
+    Re-training with the original (uncleaned) labels and comparing against
+    the cleaned-label model will isolate the accuracy impact of the
+    mixed-format bug.
+    The magnitude of the effect depends on how heavily the corrupted files
+    are sampled during training.
+
+  \item[Cross-domain evaluation (Surabaya dataset).]
+    Collecting and annotating a dataset of Surabaya, Indonesia, traffic
+    footage — split by recording location to prevent data leakage — will
+    allow measurement of the Philippine-to-Indonesian transfer gap and
+    evaluation of joint training.
+    This dataset is planned in \texttt{trace\_novelty.py} and will be
+    released under an open licence.
+
+  \item[MPS latency benchmark.]
+    Running the latency stage with \texttt{--device mps} on the Apple M4
+    Pro will provide a complete picture of the deployment cost and
+    enable comparison with the CPU baseline.
+
+  \item[Confidence-threshold sensitivity.]
+    A sweep of the confidence threshold from 0.20 to 0.60 will
+    characterise the precision-recall trade-off and identify the
+    operating point that minimises under-counting for traffic-management
+    use cases.
+
+  \item[Prevalence audit across Roboflow Universe.]
+    Applying the \texttt{stage\_audit} script to a random sample of
+    public vehicle datasets on Roboflow Universe will estimate how
+    widespread the mixed-format problem is in community datasets.
+
+\end{description}
+
+% -------------------------------------------------------------------------
+\subsection*{Data and Code Availability}
+% -------------------------------------------------------------------------
+
+The experiment harness (\texttt{trace\_experiments.py},
+\texttt{trace\_novelty.py}), the CI workflow
+(\texttt{.github/workflows/ci.yml}), the test suite (\texttt{tests/}),
+and the Streamlit application (\texttt{app/}) are available in the public
+GitHub repository \texttt{indri007/TRACE}.
+The dataset is available from Roboflow Universe at
+\url{https://universe.roboflow.com/personal-project-kej16/vehicle-detection-vznzd-dkl8g/dataset/1}
+under CC~BY~4.0 \cite{roboflow_dataset}.
+Model weights and large data files are excluded from the repository;
+instructions for reproducing all results are provided in
+\texttt{README.md}.

@@ -1,0 +1,150 @@
+\section{Introduction}
+\label{sec:introduction}
+
+% -------------------------------------------------------------------------
+\subsection{Background}
+% -------------------------------------------------------------------------
+
+Vehicle detection is a foundational task in intelligent transportation systems (ITS).
+Accurate, real-time identification of vehicle types enables a wide range of applications,
+including traffic-flow estimation, parking management, road-capacity planning, and
+automated enforcement \cite{TODO-ITS-survey}.
+Camera-based detection has become the preferred approach because a single fixed or
+mobile camera can substitute for multiple inductive-loop sensors while simultaneously
+capturing richer information such as vehicle class, speed, and trajectory
+\cite{TODO-camera-vs-loop}.
+
+Deep convolutional neural networks have transformed object detection since the
+introduction of region-based convolutional networks \cite{TODO-rcnn}.
+Among detector families, the \textit{You Only Look Once} (YOLO) series has gained
+particular traction in real-time applications because its single-stage design
+processes the entire image in one forward pass, achieving a favourable trade-off
+between accuracy and inference speed \cite{TODO-yolo-survey}.
+Successive YOLO generations have improved backbone efficiency, neck design, and
+training strategies while keeping inference costs manageable on commodity hardware.
+
+A recent architectural trend abandons non-maximum suppression (NMS) during inference.
+NMS is a post-processing step that removes duplicate bounding boxes, but it introduces
+additional latency and requires a manually tuned score threshold that affects
+precision-recall balance \cite{TODO-nms-free}.
+NMS-free detectors instead assign predictions during training so that only one
+prediction per object survives at inference time.
+The YOLO26 architecture, used in this study, adopts a dual-head assignment strategy
+to achieve NMS-free inference together with the removal of Distribution Focal Loss and
+the introduction of the MuSGD optimiser \cite{TODO-yolo26}.
+We use the medium-scale variant YOLO26m (21.78 GFLOPs, 74.70\,M parameters, 42.0\,MB
+weights), as confirmed by the model-size measurements in our experiment harness.
+
+% -------------------------------------------------------------------------
+\subsection{Problem Statement and Motivation}
+% -------------------------------------------------------------------------
+
+Despite strong benchmark performance on large datasets such as COCO, two practical
+problems limit how well published results transfer to real traffic deployments.
+
+\textbf{Domain shift.}
+Traffic composition and scene geometry vary substantially across regions.
+South and Southeast Asian traffic contains vehicle types that are rare or absent in
+Western benchmarks, including buses of varying sizes, vans used as informal taxis, and
+motorcycles mixed with heavy goods vehicles \cite{TODO-domain-shift}.
+Detectors trained on generic datasets typically lose accuracy when applied to such
+scenes, yet many applied studies train and test on a single domain and do not measure
+this loss.
+The dataset used here covers three classes — \textit{bus}, \textit{car}, and
+\textit{van} — assembled from a heterogeneous collection of scenes and exported from
+Roboflow Universe under CC~BY~4.0 (project
+\texttt{vehicle-detection-vznzd-dkl8g},~v1, 9\,725 images in total)
+\cite{roboflow_dataset}.
+Class boundaries, particularly between \textit{car} and \textit{van}, are
+visually ambiguous, as confirmed by our TIDE-style error analysis which found
+\textit{van}$\rightarrow$\textit{car} to be the dominant confusion pair.
+
+\textbf{Silent label corruption in mixed-format datasets.}
+Community datasets assembled on annotation platforms are often merged from several
+sources and may contain annotations stored in different formats.
+In Ultralytics~8.x, a label file that contains both bounding-box rows (five values per
+row) and polygon rows (more than five values per row) is parsed entirely as a polygon
+file; bounding-box rows are silently reinterpreted as degenerate polygons, producing
+incorrect boxes without any error message \cite{TODO-ultralytics-label-bug}.
+Our audit of the training split identified three label files in which this condition
+holds (81 polygon rows mixed among 18\,413 bounding-box rows), all in the
+\textit{bus} class.
+The validation and test splits contained no mixed files.
+The magnitude of the accuracy impact depends on how many ground-truth boxes are
+corrupted; this study quantifies that effect.
+
+% -------------------------------------------------------------------------
+\subsection{Research Questions}
+% -------------------------------------------------------------------------
+
+This study addresses the following research questions.
+
+\begin{enumerate}
+\item[\textbf{RQ1.}]
+  How accurate and how fast is YOLO26m for vehicle detection and counting on a
+  heterogeneous public dataset, and how does it compare with YOLOv8m, YOLO11m, and
+  RT-DETR-l under identical training settings?
+  [DATA DIBUTUHKAN: Tables T8, T9 — baseline and augmentation ablation runs not yet
+  executed.]
+
+\item[\textbf{RQ2.}]
+  How common are mixed bounding-box/polygon label files in public vehicle datasets,
+  and how much does correcting them change detection accuracy?
+
+\item[\textbf{RQ3.}]
+  How suitable is the trained detector for deployment in a low-cost Streamlit
+  pipeline on consumer hardware (Apple M4 Pro), and what end-to-end latency does
+  it achieve?
+\end{enumerate}
+
+% -------------------------------------------------------------------------
+\subsection{Contributions}
+% -------------------------------------------------------------------------
+
+The specific contributions of this paper are as follows.
+
+\begin{enumerate}
+\item \textbf{Benchmarking YOLO26 on a heterogeneous traffic dataset.}
+  We evaluate YOLO26m under a reproducible training protocol and compare it against
+  three competitive baselines (YOLOv8m, YOLO11m, RT-DETR-l).
+  On the test split, the deployed YOLO26m checkpoint achieves
+  P\,=\,0.845, R\,=\,0.752, mAP$_{50}$\,=\,0.784, and
+  mAP$_{50:95}$\,=\,0.594 (clean labels, as measured by our experiment harness).
+  [DATA DIBUTUHKAN: comparative tables once baselines are trained.]
+
+\item \textbf{Documentation and quantification of a silent label-format bug.}
+  We identify, reproduce, and measure the accuracy effect of mixed bounding-box/polygon
+  label files in Ultralytics exports, and release an open-source audit script
+  (\texttt{trace\_experiments.py}, stage \texttt{audit}) that other practitioners can
+  apply to their own datasets.
+
+\item \textbf{TIDE-style error taxonomy.}
+  Using our TIDE-inspired analysis (confidence threshold 0.4, IoU$_{fg}$\,=\,0.5,
+  IoU$_{bg}$\,=\,0.1), we decompose test-set errors into classification, localisation,
+  duplicate, background, and missed categories per class and per object size,
+  providing actionable insight for future model improvements.
+
+\item \textbf{End-to-end deployment pipeline and latency measurement.}
+  We package the trained detector in a Streamlit application that logs vehicle counts
+  to Google Sheets via an n8n webhook and sends Telegram alerts.
+  Measured CPU inference latency is 96.3\,ms per image (mean end-to-end: 99.1\,ms);
+  MPS (Apple M4 Pro GPU) latency is [DATA DIBUTUHKAN: MPS run not yet captured in
+  summary].
+\end{enumerate}
+
+% -------------------------------------------------------------------------
+\subsection{Paper Structure}
+% -------------------------------------------------------------------------
+
+The remainder of this paper is organised as follows.
+Section~\ref{sec:related_work} reviews related work on vehicle detection, NMS-free
+detectors, and label-quality issues in crowdsourced datasets.
+Section~\ref{sec:methodology} describes the dataset, the label audit procedure, the
+model architecture, and the deployment pipeline.
+Section~\ref{sec:experiments} defines the experimental protocol, evaluation metrics,
+and hardware configuration.
+Section~\ref{sec:results} presents the detection performance, latency measurements,
+and error analysis.
+Section~\ref{sec:discussion} interprets the results with respect to the research
+questions and discusses limitations.
+Section~\ref{sec:conclusion} summarises the findings and outlines future work.

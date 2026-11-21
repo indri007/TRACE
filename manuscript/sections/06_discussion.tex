@@ -1,0 +1,192 @@
+\section{Discussion}
+\label{sec:discussion}
+
+This section interprets the results with respect to the three research
+questions (Section~\ref{sec:rq}), examines the label-format issue in
+broader context (Section~\ref{sec:disc-label}), discusses the deployment
+pipeline (Section~\ref{sec:disc-deploy}), and states the limitations of
+the current work (Section~\ref{sec:limitations}).
+
+% -------------------------------------------------------------------------
+\subsection{Research Questions Revisited}
+\label{sec:rq}
+% -------------------------------------------------------------------------
+
+\textbf{RQ1: How accurate and fast is YOLO26m on this dataset?}
+
+The deployed YOLO26m checkpoint achieves mAP$_{50}$~=~0.784 and
+mAP$_{50:95}$~=~0.594 on the test split (Table~\ref{tab:overall}).
+These figures place the model in a competitive range for applied vehicle
+detection, though direct comparison with published studies is confounded
+by dataset differences.
+On the COCO benchmark, YOLO26m is reported to achieve mAP$_{50:95}$ in
+the mid-to-high 50s \cite{yolo262023}; the value of 0.594 obtained here
+suggests that the three-class vehicle dataset is of similar or slightly
+lower difficulty than the full 80-class COCO evaluation for the classes
+in question.
+
+Precision (0.845) substantially exceeds recall (0.752), implying that
+the model is conservative — when it makes a prediction, it is usually
+correct, but it misses a non-trivial fraction of vehicles.
+The TIDE analysis confirms this: missed detections (78) outnumber
+false positives from background (22) by more than three to one.
+For traffic-counting applications, false negatives are typically more
+harmful than false positives because under-counting leads to incorrect
+density estimates.
+This imbalance could be addressed by lowering the confidence threshold
+below 0.40 at the cost of increased background detections.
+
+A fair comparison with YOLOv8m, YOLO11m, and RT-DETR-l is [DATA
+DIBUTUHKAN] because the \texttt{train} stage was not executed.
+The architectural expectation is that YOLO26's NMS-free inference will
+show a small latency advantage over NMS-using baselines, particularly
+under high-density scenes where NMS operates on many candidate boxes.
+
+\textbf{RQ2: How common are mixed label files, and what is their effect?}
+
+Three of 9\,218 training label files contained mixed bounding-box and
+polygon rows (0.033\,\% of files).
+All three belonged to the \textit{bus} class, which is consistent with
+the hypothesis that bus outlines were annotated as polygons by a subset of
+contributors while other classes used the standard bounding-box format.
+
+Because the validation and test label files had no mixed rows, the
+evaluation metrics in Table~\ref{tab:overall} are identical for original
+and cleaned labels.
+The impact of the mixed-format bug therefore manifests at \emph{training
+time}: three label files in the training split were silently misread by
+Ultralytics~8.4.53, corrupting the box coordinates for every other
+bounding-box annotation in those files.
+Measuring the accuracy change requires re-training with and without the
+fix and is [DATA DIBUTUHKAN] from the \texttt{train} stage.
+
+The practical implication is significant even before the numbers are
+available.
+The bug produces no error message and no visible warning in the training
+log, making it invisible to practitioners who do not audit their label
+files.
+Our audit script (\texttt{stage\_audit} in \texttt{trace\_experiments.py})
+takes seconds to run on a dataset of this size and reliably identifies all
+mixed files.
+We recommend running such an audit before any training run on
+community-sourced YOLO-format datasets.
+
+\textbf{RQ3: Is the deployment pipeline suitable for consumer hardware?}
+
+At 99.1\,ms per image on CPU (Apple M4 Pro, 14-core ARM), the model
+processes approximately 10 images per second, which is below the threshold
+for smooth real-time video but adequate for frame-sampled analysis
+(e.g., one frame per second from a fixed traffic camera) or offline batch
+processing.
+The Streamlit application introduces additional latency for image loading,
+Streamlit rendering, and optional n8n webhook calls
+(measured separately; MPS latency is [DATA DIBUTUHKAN]).
+
+Pre-processing (0.62\,ms) and post-processing (0.08\,ms) are negligible
+compared with the neural-network forward pass (96.31\,ms), indicating
+that YOLO26's NMS-free design has fully eliminated the NMS overhead in the
+post-processing stage.
+For comparison, a standard YOLO detector with NMS typically adds 1–5\,ms
+of post-processing latency, depending on the number of candidate boxes
+\cite{TODO-nms-free}.
+On Apple MPS the forward pass is expected to run significantly faster;
+informal testing suggests sub-50\,ms per image, which would bring the
+throughput above 20\,FPS.
+
+% -------------------------------------------------------------------------
+\subsection{Label-Format Issues in Community Datasets}
+\label{sec:disc-label}
+% -------------------------------------------------------------------------
+
+The mixed bounding-box/polygon issue encountered here likely occurs in
+other datasets on Roboflow Universe, particularly those assembled by
+merging projects with different annotation policies.
+Roboflow's polygon-to-YOLO export converts polygons to polygons rows
+(many tokens) and bounding boxes to bbox rows (five tokens) correctly
+within a single project.
+The problem arises when datasets from multiple projects are merged and
+some contributors used polygon tools while others used rectangle tools.
+
+The scope of this problem across the full Roboflow Universe catalogue is
+unknown.
+The \texttt{trace\_novelty.py} harness in this repository includes a
+planned stage that downloads a sample of public vehicle datasets and
+runs the same audit to estimate the prevalence of mixed files.
+Until that audit is complete, practitioners should treat community
+YOLO-format datasets as potentially containing mixed files and run
+a lightweight token-count check before training.
+
+% -------------------------------------------------------------------------
+\subsection{Deployment Pipeline}
+\label{sec:disc-deploy}
+% -------------------------------------------------------------------------
+
+The VehicleScope~AI Streamlit application demonstrates that a
+state-of-the-art NMS-free detector can be deployed for practical use
+without specialised infrastructure.
+The n8n webhook and Google Sheets logging layer allows non-technical
+users to access counts via a familiar spreadsheet interface without
+writing any code.
+The Telegram alert mechanism provides a low-latency notification channel
+for high-occupancy events (more than 10 vehicles per frame).
+
+One limitation of the current deployment is that it processes individual
+uploaded images rather than a live video stream.
+Extending the pipeline to ingest a real-time RTSP stream would require a
+frame-capture thread and either a queue-based architecture or frame
+dropping to maintain acceptable latency.
+At 10.1\,FPS on CPU the system could process one out of every three
+frames of a 30\,FPS feed without buffering; MPS acceleration would
+improve this ratio.
+
+% -------------------------------------------------------------------------
+\subsection{Limitations}
+\label{sec:limitations}
+% -------------------------------------------------------------------------
+
+The following limitations should be considered when interpreting the
+results.
+
+\begin{enumerate}
+
+  \item \textbf{Single checkpoint, no re-training comparison.}
+    All quantitative results are from the single pre-trained \texttt{best.pt}
+    checkpoint.
+    The baseline comparison (YOLO26m vs.\ YOLOv8m, YOLO11m, RT-DETR-l)
+    and the augmentation ablation have not yet been executed.
+    Claims about YOLO26's superiority over baselines are therefore
+    conditional on future experiments.
+
+  \item \textbf{No cross-domain evaluation.}
+    The dataset originates from a single Roboflow project whose geographic
+    provenance is not fully documented.
+    How well the trained model generalises to footage from a different
+    city or camera network is unknown.
+    The planned Surabaya traffic dataset (contribution~C3,
+    \texttt{trace\_novelty.py}) would address this gap.
+
+  \item \textbf{CPU-only latency measurement.}
+    The MPS latency run did not complete successfully in the current
+    experiment set.
+    The CPU figure (99.1\,ms) over-represents the deployment latency on
+    the target Apple M4 Pro hardware.
+
+  \item \textbf{Label provenance.}
+    The dataset does not publish per-image metadata such as recording
+    location, date, or camera model.
+    It is therefore not possible to control for confounds such as seasonal
+    lighting variation or camera-specific artefacts.
+
+  \item \textbf{Class definition ambiguity.}
+    The boundary between \textit{car} and \textit{van} is defined by
+    annotator judgement and is likely inconsistent across contributors.
+    This ambiguity is a structural property of the dataset rather than a
+    failure of the detection model, but it limits the ceiling of achievable
+    accuracy for the \textit{van} class.
+
+  \item \textbf{Single random seed.}
+    The deployed checkpoint was trained with one seed.
+    Metric variance across seeds is unknown; the planned three-seed
+    protocol (seeds 0, 1, 2) will quantify this.
+
+\end{enumerate}

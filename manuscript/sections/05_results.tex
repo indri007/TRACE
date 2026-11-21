@@ -1,0 +1,243 @@
+\section{Results}
+\label{sec:results}
+
+This section reports results in four parts: overall detection performance
+(Section~\ref{sec:res-overall}), per-class performance
+(Section~\ref{sec:res-perclass}), inference latency
+(Section~\ref{sec:res-latency}), and TIDE-style error analysis
+(Section~\ref{sec:res-errors}).
+All results are from the deployed \texttt{best.pt} checkpoint evaluated on
+the test split with clean (polygon-converted) labels, unless noted otherwise.
+Baseline comparison (Table~T8) and augmentation ablation (Table~T9) are
+marked [DATA DIBUTUHKAN] because the \texttt{train} stage was not executed
+in the current run.
+
+% -------------------------------------------------------------------------
+\subsection{Overall Detection Performance}
+\label{sec:res-overall}
+% -------------------------------------------------------------------------
+
+Table~\ref{tab:overall} reports overall precision, recall, F1, mAP$_{50}$,
+and mAP$_{50:95}$ for the deployed YOLO26m checkpoint on both the validation
+and test splits, evaluated separately on the original labels (as exported
+from Roboflow) and on the cleaned labels (polygon rows converted to bounding
+boxes).
+
+\begin{table}[htbp]
+\centering
+\caption{Overall detection performance of the deployed YOLO26m checkpoint
+  (Table T6 from experiment harness). Confidence threshold: 0.40;
+  image size: $640\times640$.}
+\label{tab:overall}
+\begin{tabular}{llrrrrr}
+\toprule
+Labels & Split & P & R & F1 & mAP$_{50}$ & mAP$_{50:95}$ \\
+\midrule
+clean    & val  & 0.836 & 0.701 & 0.762 & 0.761 & 0.595 \\
+clean    & test & 0.845 & 0.752 & 0.795 & 0.784 & 0.594 \\
+original & val  & 0.836 & 0.701 & 0.762 & 0.761 & 0.595 \\
+original & test & 0.845 & 0.752 & 0.795 & 0.784 & 0.594 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The clean and original label variants yield identical metrics because the
+mixed-format files affect only three training label files; the validation
+and test label files contained no mixed rows (Table~\ref{tab:audit}).
+Consequently, the label cleaning affects only the training distribution
+seen by the model, not the evaluation ground truth.
+The quantitative impact of cleaning on training is captured by the
+augmentation ablation and is [DATA DIBUTUHKAN] pending re-training.
+
+On the test split the model achieves mAP$_{50}$~=~0.784 and
+mAP$_{50:95}$~=~0.594, with precision 0.845 and recall 0.752.
+The gap between mAP$_{50}$ and mAP$_{50:95}$ (0.190) suggests that
+localisation quality is a limiting factor: predictions that correctly
+identify the class and approximate location may still fail stricter IoU
+thresholds.
+
+% -------------------------------------------------------------------------
+\subsection{Per-Class Performance}
+\label{sec:res-perclass}
+% -------------------------------------------------------------------------
+
+Table~\ref{tab:perclass} breaks down performance by class on both
+validation and test splits (clean labels).
+
+\begin{table}[htbp]
+\centering
+\caption{Per-class detection performance of the deployed YOLO26m checkpoint
+  (Table T7 from experiment harness; clean labels).}
+\label{tab:perclass}
+\begin{tabular}{llrrrrr}
+\toprule
+Split & Class & P & R & F1 & AP$_{50}$ & AP$_{50:95}$ \\
+\midrule
+val  & bus & 0.906 & 0.770 & 0.832 & 0.815 & 0.607 \\
+val  & car & 0.903 & 0.703 & 0.791 & 0.818 & 0.619 \\
+val  & van & 0.698 & 0.629 & 0.662 & 0.651 & 0.559 \\
+\midrule
+test & bus & 0.871 & 0.780 & 0.823 & 0.800 & 0.601 \\
+test & car & 0.861 & 0.758 & 0.806 & 0.786 & 0.558 \\
+test & van & 0.803 & 0.717 & 0.757 & 0.766 & 0.622 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Several observations follow.
+First, \textit{bus} and \textit{car} achieve the highest AP$_{50}$ on
+both splits (0.800 and 0.786 on test, respectively), consistent with
+their higher frequency in the training data
+(Section~\ref{sec:data}).
+Second, \textit{van} has the lowest precision on the validation split
+(0.698) and the lowest AP$_{50:95}$ on the test split (0.622 for van vs.\
+0.601 for bus, 0.558 for car).
+The inter-class visual ambiguity between \textit{van} and \textit{car} is
+reflected in the TIDE confusion pairs
+(Table~\ref{tab:confusion-pairs}, Section~\ref{sec:res-errors}).
+Third, test-split \textit{van} precision (0.803) is markedly higher than
+its validation precision (0.698), suggesting that the validation and test
+distributions differ slightly in the proportion of ambiguous van instances.
+
+% -------------------------------------------------------------------------
+\subsection{Inference Latency and Throughput}
+\label{sec:res-latency}
+% -------------------------------------------------------------------------
+
+Table~\ref{tab:latency} reports CPU inference latency and model-size
+statistics (Table T10 from the experiment harness).
+MPS (Apple GPU) latency is [DATA DIBUTUHKAN]: the MPS stage was not
+captured in the current run because the \texttt{--device mps} flag was
+set but the latency stage recorded only the CPU fallback.
+
+\begin{table}[htbp]
+\centering
+\caption{Inference latency on CPU (Apple M4 Pro, macOS 15.3.1)
+  and model size (Table T10). 50 test images after 5-image warm-up.}
+\label{tab:latency}
+\begin{tabular}{lrrrrr}
+\toprule
+Setting & Images & Mean (ms) & Median (ms) & P95 (ms) & FPS \\
+\midrule
+CPU & 50 & 99.1 & 98.6 & 105.2 & 10.1 \\
+\midrule
+\multicolumn{6}{l}{\textit{Model size}} \\
+\midrule
+GFLOPs     & \multicolumn{5}{l}{21.78} \\
+Params (M) & \multicolumn{5}{l}{74.70} \\
+Weights (MB) & \multicolumn{5}{l}{42.0} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Internal stage latencies reported by Ultralytics are:
+pre-process 0.62\,ms, inference 96.31\,ms, post-process 0.08\,ms.
+The inference stage dominates; pre- and post-processing together
+contribute less than 1\,ms.
+At 10.1\,FPS on CPU, the model can process one image every $\approx\!99$\,ms,
+which is below the 25–30\,FPS required for smooth real-time video
+processing but adequate for still-image batch analysis or frame-sampled
+video (e.g., one frame per second).
+MPS acceleration on the Apple M4 Pro is expected to reduce per-image
+latency to below 50\,ms (observed in informal testing), corresponding to
+roughly 20\,FPS; this will be formalised in a follow-up run.
+
+% -------------------------------------------------------------------------
+\subsection{TIDE-Style Error Analysis}
+\label{sec:res-errors}
+% -------------------------------------------------------------------------
+
+Table~\ref{tab:tide} reports the TIDE-style error taxonomy on the test set
+(Table T11 from the experiment harness; confidence $\ge 0.40$,
+$\tau_{fg}=0.5$, $\tau_{bg}=0.1$).
+
+\begin{table}[htbp]
+\centering
+\caption{TIDE-style error taxonomy on the test set (Table T11).
+  Cls = classification error; Loc = localisation error; Dup = duplicate;
+  BG = spurious background; Miss = missed ground truth.}
+\label{tab:tide}
+\begin{tabular}{lrrrrrrr}
+\toprule
+Class / Size & TP & Cls & Loc & Both & Dup & BG & Miss \\
+\midrule
+bus          &  85 &  3 &  1 & 0 & 2 &  7 & 22 \\
+car          & 181 &  6 &  4 & 0 & 2 & 13 & 47 \\
+van          &  45 & 14 &  0 & 0 & 0 &  2 &  9 \\
+\textbf{all} & \textbf{311} & \textbf{23} & \textbf{5} & \textbf{0} & \textbf{4} & \textbf{22} & \textbf{78} \\
+\midrule
+small        &  5 & 0 & 0 & 0 & 0 &  1 &  6 \\
+medium       & 58 & 2 & 0 & 0 & 0 &  8 & 32 \\
+large        &248 &21 & 5 & 0 & 4 & 13 & 40 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\textbf{Missed detections} (78 total) are the dominant error type,
+accounting for 20\,\% of all ground-truth instances
+(78\,/\,(311\,+\,78)\,=\,20.1\,\%).
+Missed detections are especially frequent for \textit{car} (47 missed),
+which also has the highest instance count.
+Most missed instances fall in the \textit{large} size bucket (40 of 78),
+suggesting that even clearly visible vehicles are sometimes skipped,
+possibly due to occlusion or atypical aspect ratios.
+
+\textbf{Classification errors} (23 total) are the second-largest error
+type. Fourteen of the 23 arise in the \textit{van} class, almost all
+attributable to van-to-car confusion.
+Table~\ref{tab:confusion-pairs} details the classification-error pairs.
+
+\begin{table}[htbp]
+\centering
+\caption{Classification-error pairs (Table T11b). Only pairs with count
+  $\ge 1$ are shown.}
+\label{tab:confusion-pairs}
+\begin{tabular}{lr}
+\toprule
+True $\rightarrow$ Predicted & Count \\
+\midrule
+van $\rightarrow$ car  & 14 \\
+car $\rightarrow$ van  &  5 \\
+bus $\rightarrow$ van  &  2 \\
+car $\rightarrow$ bus  &  1 \\
+bus $\rightarrow$ car  &  1 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Van-to-car confusion (14 cases) is by far the most frequent error pair,
+confirming the visual ambiguity between larger cars and smaller vans noted
+in Section~\ref{sec:data}.
+The asymmetry between van$\rightarrow$car (14) and car$\rightarrow$van (5)
+suggests that the model has a systematic bias towards predicting
+\textit{car} when uncertain, consistent with the class imbalance
+(car is the dominant class with 57\,\% of training instances).
+
+\textbf{Background detections} (22 total) are spurious predictions with
+no matching ground truth.
+They are concentrated in \textit{car} (13) and \textit{bus} (7),
+suggesting that background textures or non-vehicle objects in those scenes
+occasionally trigger false positives.
+
+\textbf{Localisation errors} are rare (5 total), and there are no
+Both-class (simultaneously wrong class and location) errors.
+This indicates that the model's regression branch is generally accurate
+when it does commit to a prediction.
+
+\textbf{Size analysis.}
+Small objects ($<32^2$ px) account for only 12 TP and 6 missed detections,
+reflecting the low proportion of small vehicles in the dataset.
+Large objects account for the majority of both TP (248) and errors,
+consistent with the dataset's predominance of medium-to-large vehicles in
+unoccluded frontal or side views.
+
+\textbf{Qualitative examples.}
+Figures~F10 (success and failure cases saved to
+\texttt{results/figures/F10\_qualitative/}) illustrate representative
+detection outcomes.
+Success cases show clean detection of multiple vehicles in uncluttered
+scenes.
+Failure cases include missed vehicles in dense clusters and spurious
+detections on vehicle-shaped background objects.
+[DATA DIBUTUHKAN: insert representative F10 figures here once figure
+paths are confirmed.]

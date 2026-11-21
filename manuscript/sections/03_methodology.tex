@@ -1,0 +1,224 @@
+\section{Methodology}
+\label{sec:methodology}
+
+This section describes the dataset and label-audit procedure
+(Section~\ref{sec:data}), the model architecture
+(Section~\ref{sec:model}), the training configuration
+(Section~\ref{sec:training}), and the deployment pipeline
+(Section~\ref{sec:deployment}).
+
+% -------------------------------------------------------------------------
+\subsection{Dataset}
+\label{sec:data}
+% -------------------------------------------------------------------------
+
+We use the publicly available \emph{Vehicle Detection} dataset hosted on
+Roboflow Universe (workspace \texttt{personal-project-kej16}, project
+\texttt{vehicle-detection-vznzd-dkl8g}, version~1, exported
+2025-10-12) \cite{roboflow_dataset}.
+The dataset is released under a Creative Commons CC~BY~4.0 licence,
+permitting research use with attribution.
+
+\textbf{Composition.}
+The dataset contains 9\,725 images annotated with three vehicle classes:
+\textit{bus}, \textit{car}, and \textit{van}.
+Images are split into training (9\,218 images), validation (287 images),
+and test (220 images) sets, corresponding to approximately
+94.8\,\%, 2.9\,\%, and 2.3\,\% of the total, respectively.
+Full composition statistics are given in Table~\ref{tab:dataset}.
+
+\begin{table}[htbp]
+\centering
+\caption{Dataset composition per split (source: label audit stage of
+\texttt{trace\_experiments.py}).}
+\label{tab:dataset}
+\begin{tabular}{lrrrrrr}
+\toprule
+Split & Images & Instances & Bus & Car & Van & Inst/img \\
+\midrule
+Train  & 9\,218 & 18\,494 & 4\,476 & 10\,739 & 3\,279 & 2.006 \\
+Valid  &   287  &    427  &   113  &    279  &    35  & 1.488 \\
+Test   &   220  &    413  &   109  &    236  &    68  & 1.877 \\
+\midrule
+Total  & 9\,725 & 19\,334 & 4\,698 & 11\,254 & 3\,382 & -- \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The \textit{car} class dominates all splits (approximately 58\,\% of
+instances), while \textit{van} is the least frequent (approximately 17\,\%).
+This imbalance is relevant because class frequency correlates with detection
+difficulty and with the nature of confusion errors
+(Section~\ref{sec:results}).
+
+\textbf{Image preprocessing.}
+All images are resized to $640\times640$ pixels at inference time using
+letterboxing (padding with grey) to preserve the aspect ratio.
+No offline resizing is performed; images are stored and read at their
+original resolution.
+
+% -------------------------------------------------------------------------
+\subsection{Label-Format Audit and Cleaning}
+\label{sec:audit}
+% -------------------------------------------------------------------------
+
+The Roboflow export uses the YOLO label format, in which each annotation
+row in a \texttt{.txt} file contains either a bounding-box record
+(five whitespace-separated values: class index, normalised centre-x,
+centre-y, width, height) or a polygon record (more than five values:
+class index followed by alternating x and y coordinates).
+
+Upon inspecting the training labels, we found that three label files
+contain both formats in the same file — specifically, bounding-box rows
+mixed with polygon rows that encode bus outlines.
+In Ultralytics~8.x (version 8.4.53 used here), the label parser
+classifies a file as a polygon annotation if \emph{any} row contains more
+than six tokens, and then reinterprets every row accordingly.
+Bounding-box rows in such files are silently converted into degenerate
+polygon approximations, which produces incorrect boxes for those
+instances without raising any warning.
+
+To correct this, we implemented a label-audit stage
+(\texttt{stage\_audit} in \texttt{trace\_experiments.py}) that:
+\begin{enumerate}
+  \item Scans all label files in every split.
+  \item Classifies each row by token count (5 tokens~=~bbox;
+        $>6$ tokens~=~polygon).
+  \item Flags files that contain both types as \emph{mixed}.
+  \item Writes a cleaned copy of every label file by converting
+        polygon rows to their axis-aligned bounding-box approximation
+        using the formula
+        $cx = (\min x + \max x)/2$, $cy = (\min y + \max y)/2$,
+        $w = \max x - \min x$, $h = \max y - \min y$.
+\end{enumerate}
+
+Table~\ref{tab:audit} summarises the audit results.
+No mixed files were found in the validation or test splits;
+three mixed files appeared in the training split, all in the
+\textit{bus} class.
+The cleaned dataset is used for all reported evaluations.
+
+\begin{table}[htbp]
+\centering
+\caption{Label-format audit results per split.}
+\label{tab:audit}
+\begin{tabular}{lrrrr}
+\toprule
+Split & BBox rows & Polygon rows & Mixed files & BBox in mixed \\
+\midrule
+Train & 18\,413 & 81 & 3 & 3 \\
+Valid &    408  & 19 & 0 & 0 \\
+Test  &    399  & 14 & 0 & 0 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+% -------------------------------------------------------------------------
+\subsection{Model Architecture}
+\label{sec:model}
+% -------------------------------------------------------------------------
+
+We use \textbf{YOLO26m}, the medium-scale variant of the YOLO26 detector
+released by Ultralytics \cite{yolo262023}.
+YOLO26 adopts a dual-head assignment strategy that eliminates the need for
+non-maximum suppression (NMS) at inference time \cite{nmsfree2022}.
+The one-to-one head produces the final prediction; the one-to-many head
+provides auxiliary supervision during training only and is discarded at
+inference.
+Distribution Focal Loss is removed in favour of a standard regression loss,
+and the model is optimised with the MuSGD optimiser.
+
+The medium variant has the following characteristics, as measured by our
+experiment harness:
+
+\begin{itemize}
+  \item \textbf{Parameters:} 74.70\,M
+  \item \textbf{Computational cost:} 21.78\,GFLOPs (at $640\times640$)
+  \item \textbf{Weight file size:} 42.0\,MB (\texttt{yolo26m.pt})
+\end{itemize}
+
+We initialise training from the publicly available COCO pre-trained
+weights (\texttt{yolo26m.pt}) and fine-tune on the vehicle dataset.
+The deployed checkpoint (\texttt{app/models/best.pt}) is the
+best-validation-mAP$_{50}$ checkpoint from the initial training run
+(epoch 23 of 50, as recorded in the checkpoint metadata).
+
+For comparison, the experiment harness also supports three additional
+baselines under identical settings:
+\textbf{YOLOv8m} \cite{TODO-yolov8}, \textbf{YOLO11m} \cite{TODO-yolo11},
+and \textbf{RT-DETR-l} \cite{rtdetr2022}.
+Results for these baselines are reported as [DATA DIBUTUHKAN] pending
+the multi-seed training runs.
+
+% -------------------------------------------------------------------------
+\subsection{Training Configuration}
+\label{sec:training}
+% -------------------------------------------------------------------------
+
+All models are trained with a shared base configuration derived from the
+deployed checkpoint's \texttt{train\_args} and encoded in
+\texttt{trace\_experiments.py} (\texttt{BASE\_TRAIN}):
+
+\begin{itemize}
+  \item Image size: $640\times640$
+  \item Epochs: 50 (early stopping patience: 100)
+  \item Batch size: 16
+  \item Optimiser: \texttt{auto} (Ultralytics selects AdamW for YOLO,
+        SGD for RT-DETR)
+  \item Initial learning rate ($\eta_0$): 0.01; final LR fraction: 0.01
+  \item Momentum: 0.937; weight decay: $5\times10^{-4}$
+  \item Warm-up epochs: 3
+  \item Close-mosaic (epochs before end): 10
+  \item Automatic mixed precision (AMP): enabled
+  \item Deterministic mode: enabled (for reproducibility)
+  \item Number of data-loader workers: 8
+\end{itemize}
+
+\textbf{Augmentation policy.}
+All baselines are trained with a photometric-only augmentation policy
+(\texttt{AUG\_PHOTOMETRIC}):
+HSV hue $\pm0.015$, saturation $\pm0.3$, value $\pm0.3$;
+all geometric augmentations (rotation, translation, scale, shear,
+mosaic, MixUp, CutMix, copy-paste, random erasing) disabled.
+This conservative policy avoids geometric deformations that might
+corrupt the already-noisy bus annotations.
+
+An augmentation ablation (Table~T9, [DATA DIBUTUHKAN]) compares three
+policies on YOLO26m:
+(a)~photometric only (baseline),
+(b)~Ultralytics default (which includes mosaic and geometric
+    augmentation), and
+(c)~photometric~+ light geometric
+    (fliplr~=~0.5, translate~=~0.1, scale~=~0.25).
+
+All training runs use three random seeds (0, 1, 2) and report
+mean\,$\pm$\,SD across seeds.
+Runs whose output directory already contains \texttt{test\_metrics.json}
+are skipped automatically, enabling incremental execution.
+
+% -------------------------------------------------------------------------
+\subsection{Deployment Pipeline}
+\label{sec:deployment}
+% -------------------------------------------------------------------------
+
+The trained detector is packaged in a Streamlit web application named
+\textbf{VehicleScope~AI} (version 1.0.0, \texttt{app/main.py}).
+The application accepts uploaded images, runs YOLO26m inference at a
+confidence threshold of 0.40 and an input size of 640, and displays
+annotated bounding boxes colour-coded by class:
+red for bus, teal for car, and yellow for van.
+
+Vehicle counts are posted to a Google Sheets spreadsheet via an n8n
+webhook (\texttt{app/utils/n8n\_client.py}).
+The webhook payload includes a UTC timestamp, per-class counts, the total
+vehicle count, the mean detection confidence, and an alert flag that is
+set when the total exceeds a configurable threshold (default: 10 vehicles).
+If the total exceeds the threshold, the n8n workflow additionally sends a
+Telegram notification.
+
+Figure~\ref{fig:pipeline} illustrates the end-to-end pipeline.
+The deployment stack runs entirely on the user's local machine (Apple M4 Pro,
+macOS~15.3.1, 24\,GB RAM) using the MPS backend for GPU-accelerated
+inference when available.
+CPU-only latency is measured as a fallback and reported in
+Table~T10 (Section~\ref{sec:results}).

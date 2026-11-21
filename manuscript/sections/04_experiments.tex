@@ -1,0 +1,203 @@
+\section{Experimental Setup}
+\label{sec:experiments}
+
+This section describes the evaluation metrics
+(Section~\ref{sec:metrics}), the hardware and software environment
+(Section~\ref{sec:env}), and the specific experiments performed
+(Section~\ref{sec:exp-design}).
+
+% -------------------------------------------------------------------------
+\subsection{Evaluation Metrics}
+\label{sec:metrics}
+% -------------------------------------------------------------------------
+
+We use the standard COCO detection metrics as implemented by the
+Ultralytics evaluation engine:
+
+\begin{itemize}
+  \item \textbf{Precision (P)} — the fraction of predicted boxes that
+        overlap a ground-truth box with IoU $\ge 0.5$ and the correct class.
+  \item \textbf{Recall (R)} — the fraction of ground-truth boxes correctly
+        retrieved at the same IoU and class criterion.
+  \item \textbf{F1 score} — the harmonic mean of precision and recall,
+        computed as $F_1 = 2PR/(P+R)$.
+  \item \textbf{mAP$_{50}$} — mean Average Precision at a single IoU
+        threshold of 0.50, averaged over classes.
+  \item \textbf{mAP$_{50:95}$} — mean Average Precision averaged over
+        ten IoU thresholds from 0.50 to 0.95 in steps of 0.05, then
+        averaged over classes.  This is the primary COCO metric.
+\end{itemize}
+
+All metrics are computed on the \textbf{test split} as the held-out
+evaluation set.
+The validation split is used only for checkpoint selection (best
+mAP$_{50}$ epoch).
+Per-class metrics (Precision, Recall, F1, AP$_{50}$, AP$_{50:95}$) are
+reported for each of the three classes: \textit{bus}, \textit{car}, and
+\textit{van}.
+
+\textbf{TIDE-style error taxonomy.}
+In addition to summary AP metrics, we apply a TIDE-inspired error analysis
+\cite{TODO-tide} to decompose test-set errors into six mutually exclusive
+categories.
+Our implementation in \texttt{stage\_errors} of
+\texttt{trace\_experiments.py} follows the assignment rule of
+Bolya~et~al.\ (2020) and uses the thresholds defined below.
+For each predicted box (sorted by confidence, highest first):
+
+\begin{enumerate}
+  \item \textbf{True Positive (TP)} — highest-IoU unmatched ground-truth
+        box of the same class with IoU $\ge 0.5$.
+  \item \textbf{Duplicate} — same class and IoU $\ge 0.5$, but the
+        best matching ground-truth box is already matched by a
+        higher-confidence prediction.
+  \item \textbf{Classification} — a ground-truth box of a different class
+        has IoU $\ge 0.5$; the box is well localised but the class is wrong.
+  \item \textbf{Localisation} — same class exists, IoU $\in [0.1, 0.5)$;
+        the class is correct but the box does not overlap enough.
+  \item \textbf{Both (cls+loc)} — a ground-truth box of a different class
+        has IoU $\in [0.1, 0.5)$; both class and location are wrong.
+  \item \textbf{Background} — no ground-truth box has IoU $\ge 0.1$;
+        the prediction is a spurious detection.
+\end{enumerate}
+
+Ground-truth boxes not matched by any prediction are counted as
+\textbf{Missed}.
+Error counts are stratified by class (\textit{bus}, \textit{car},
+\textit{van}, \textit{all}) and by object size
+(\textit{small}: area~$<32^2$, \textit{medium}: $32^2$–$96^2$,
+\textit{large}: $>96^2$ pixels in the original image).
+
+The confidence threshold for the TIDE analysis is 0.40, matching the
+application default (\texttt{DEFAULT\_CONF} in \texttt{app/config.py}).
+The foreground IoU threshold is $\tau_{fg} = 0.5$ and the background
+threshold is $\tau_{bg} = 0.1$.
+
+\textbf{Latency metrics.}
+Inference latency is measured in milliseconds as the wall-clock time for a
+single image, averaged over a sample of test images after a warm-up phase of
+five images.
+We report:
+(a)~mean end-to-end latency (ms),
+(b)~median end-to-end latency (ms),
+(c)~95th-percentile latency (ms), and
+(d)~throughput (images per second, FPS) = $1000\,/\,\bar{t}$.
+Ultralytics also reports internal stage latencies: pre-process,
+inference, and post-process.
+
+% -------------------------------------------------------------------------
+\subsection{Hardware and Software Environment}
+\label{sec:env}
+% -------------------------------------------------------------------------
+
+All experiments reported in this paper were executed on the following
+system (Table~\ref{tab:env}):
+
+\begin{table}[htbp]
+\centering
+\caption{Hardware and software environment (source: stage \texttt{env}
+  of \texttt{trace\_experiments.py}).}
+\label{tab:env}
+\begin{tabular}{ll}
+\toprule
+Item & Value \\
+\midrule
+Operating system  & macOS 15.3.1 (arm64) \\
+Processor         & Apple M4 Pro (ARM, 14 threads) \\
+RAM               & 24.0 GB \\
+GPU               & Apple Silicon MPS (no NVIDIA/CUDA) \\
+Python            & 3.14.2 \\
+PyTorch           & 2.12.0 \\
+Ultralytics       & 8.4.53 \\
+CUDA              & not available \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+No NVIDIA GPU was available; GPU-accelerated inference used the Apple
+Metal Performance Shaders (MPS) backend.
+CPU inference was used as the fallback for latency benchmarking, and all
+training runs were executed on CPU (the \texttt{train} stage was not
+executed in the current run set; see \texttt{run\_args.json}).
+
+The experiment harness automatically selects the best available device:
+CUDA~GPU if available, then MPS (Apple Silicon), then CPU.
+This logic is implemented in \texttt{auto\_device()} in
+\texttt{trace\_experiments.py}.
+
+% -------------------------------------------------------------------------
+\subsection{Experiment Design}
+\label{sec:exp-design}
+% -------------------------------------------------------------------------
+
+The full experiment harness (\texttt{trace\_experiments.py}) is organised
+into seven stages, each producing one or more output tables and figures:
+
+\begin{description}
+  \item[\texttt{audit}]
+    Label-format audit and production of a cleaned dataset copy
+    (Tables~T2, B1; Section~\ref{sec:audit}).
+
+  \item[\texttt{env}]
+    Hardware and software environment snapshot (Table~T5).
+
+  \item[\texttt{eval}]
+    Evaluation of the deployed \texttt{best.pt} checkpoint on the validation
+    and test splits, for both original and cleaned labels.
+    Produces overall metrics (Table~T6), per-class metrics (Table~T7),
+    confusion-matrix plots (Figure~F8), and PR~curves (Figure~F9).
+
+  \item[\texttt{latency}]
+    Inference-latency and throughput measurement on CPU
+    (and MPS when available) over up to 200 test images, plus model-size
+    statistics (Table~T10).
+
+  \item[\texttt{errors}]
+    TIDE-style error taxonomy on the test set (Table~T11, T11b) and
+    qualitative success/failure figures (Figure~F10).
+
+  \item[\texttt{train}] \emph{Not executed in the current run.}
+    Re-trains YOLO26m, YOLOv8m, YOLO11m, and RT-DETR-l from COCO
+    pre-trained weights on the cleaned dataset, over three seeds, with the
+    photometric-only augmentation policy.
+    Produces Table~T8 (baseline comparison) and Table~T9 (augmentation
+    ablation for YOLO26m).
+    Results are marked [DATA DIBUTUHKAN] throughout this paper.
+
+  \item[\texttt{report}]
+    Collects all tables and figure paths into
+    \texttt{results/summary.md} and archives outputs to
+    \texttt{results.zip}.
+\end{description}
+
+The stages executed in the current run were:
+\texttt{audit}, \texttt{env}, \texttt{eval}, \texttt{latency},
+\texttt{errors}, and \texttt{report}.
+This covers the evaluation of the already-trained deployed checkpoint
+but excludes new training.
+The command used was:
+
+\begin{verbatim}
+python3 trace_experiments.py \
+  --data-root ./data \
+  --weights app/models/best.pt \
+  --out ./results \
+  --device mps \
+  --stages audit env eval latency errors report
+\end{verbatim}
+
+Completed stages are skipped automatically on re-runs; incremental
+execution allows adding the \texttt{train} stage at a later date without
+repeating earlier stages.
+
+\textbf{Reproducibility.}
+All random seeds are fixed (\texttt{deterministic=True}) in
+\texttt{BASE\_TRAIN}.
+Training seeds 0, 1, and 2 are planned for the baseline and ablation
+experiments.
+The cleaned dataset is reproduced deterministically by the \texttt{audit}
+stage from the original Roboflow export.
+Model weights, the experiment harness, the CI workflow, and the test suite
+are stored in the public GitHub repository
+\texttt{indri007/TRACE}\footnote{Dataset files and model weights are
+excluded from version control via \texttt{.gitignore}.}.
