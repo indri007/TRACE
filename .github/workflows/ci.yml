@@ -1,0 +1,43 @@
+# TRACE — continuous integration (GitHub Actions)
+# fast : label/audit/error-analysis/app tests, every push and PR (~1 min)
+# model: loads best.pt and runs CPU inference, only on main (~3-5 min)
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  fast:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - name: Install light dependencies
+        run: pip install pytest numpy pyyaml requests python-dotenv opencv-python-headless
+      - name: Syntax check
+        run: python -m py_compile trace_experiments.py trace_novelty.py app/config.py app/utils/n8n_client.py
+      - name: Fast tests
+        run: pytest -m "not slow and not data"
+
+  model:
+    if: github.ref == 'refs/heads/main'
+    needs: fast
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          lfs: true
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - name: Install CPU-only PyTorch + Ultralytics
+        run: |
+          pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
+          pip install ultralytics pytest python-dotenv requests
+      - name: Model tests
+        run: pytest -m slow
