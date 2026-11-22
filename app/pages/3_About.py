@@ -1,5 +1,5 @@
 # ─────────────────────────────────────────────────────────
-#  pages/3_About.py — Info model & project
+#  pages/3_About.py — Info model & project (Colorful Light Theme)
 # ─────────────────────────────────────────────────────────
 import sys
 from pathlib import Path
@@ -18,13 +18,22 @@ st.set_page_config(
 st.markdown(
     """
     <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;900&display=swap');
-    html, body, [class*="css"] { font-family: 'Inter', sans-serif; }
+    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+    html, body, [class*="css"] { 
+        font-family: 'Plus Jakarta Sans', sans-serif; 
+        color: #0F172A;
+    }
     .info-card {
-        background: linear-gradient(145deg, #111827, #1a2234);
-        border: 1px solid rgba(255,255,255,0.08);
-        border-radius: 16px;
-        padding: 1.5rem;
+        background: #FFFFFF;
+        border: 1px solid #E2E8F0;
+        border-radius: 20px;
+        padding: 1.8rem;
+        box-shadow: 0 4px 16px rgba(15, 23, 42, 0.04);
+        margin-bottom: 1.2rem;
+    }
+    [data-testid="stSidebar"] {
+        background: linear-gradient(180deg, #F8FAFC 0%, #F1F5F9 100%);
+        border-right: 1px solid #E2E8F0;
     }
     #MainMenu, footer { visibility: hidden; }
     </style>
@@ -35,11 +44,12 @@ st.markdown(
 st.markdown(
     """
     <h1 style="
-        background: linear-gradient(90deg, #FF6B6B, #FFE66D);
+        background: linear-gradient(90deg, #2563EB, #7C3AED, #EC4899);
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
         background-clip: text;
-        font-weight: 900;
+        font-weight: 800;
+        margin-bottom: 0.5rem;
     ">ℹ️ About VehicleScope AI</h1>
     """,
     unsafe_allow_html=True,
@@ -49,149 +59,92 @@ st.markdown(
 col1, col2 = st.columns(2)
 
 with col1:
-    st.markdown("### 🎯 Tentang Proyek")
     st.markdown(
         f"""
-        **{APP_NAME}** adalah aplikasi deteksi kendaraan berbasis AI yang dibangun sebagai
-        Capstone Project Module 4.
-
-        Aplikasi ini menggabungkan:
-        - 🤖 **YOLO26** (Ultralytics SOTA Jan 2026) — model object detection end-to-end terbaru
-        - ⚙️ **n8n** — workflow automation untuk logging & alerting
-        - 🎨 **Streamlit** — frontend web interaktif
-
-        > **{APP_DESC}**
-
-        ---
-        **YOLO26 Keunggulan:**
-        - 🚀 **NMS-free** — native end-to-end inference, lebih cepat saat deployment
-        - 🔬 **MuSGD optimizer** — konvergensi lebih stabil
-        - 📉 Tanpa Distribution Focal Loss — arsitektur lebih efisien
-        - ✅ Lebih kecil, cepat & akurat dari YOLOv8
-
-        ---
-        **Version**: `{APP_VERSION}`  
-        **Model**: `{MODEL_PATH.name if MODEL_PATH.exists() else "best.pt (belum ada)"}`  
-        **Status Model**: {'✅ Model tersedia' if MODEL_PATH.exists() else '⚠️ Model belum ada — jalankan notebook/02_model_training.py terlebih dahulu'}
-        """
+        <div class="info-card" style="border-top: 4px solid #3B82F6;">
+            <h3 style="margin-top:0;">🎯 Tentang Proyek</h3>
+            <p><strong>{APP_NAME}</strong> adalah aplikasi deteksi kendaraan berbasis AI yang dibangun sebagai Capstone Project Module 4.</p>
+            <p>Aplikasi ini menggabungkan:</p>
+            <ul>
+                <li>🤖 <strong>YOLO26</strong> (Ultralytics SOTA 2026) — model object detection end-to-end native NMS-free</li>
+                <li>⚙️ <strong>n8n</strong> — workflow automation untuk pencatatan & notifikasi otomatis</li>
+                <li>🎨 <strong>Streamlit</strong> — web frontend modern dan interaktif</li>
+            </ul>
+            <blockquote style="border-left: 3px solid #3B82F6; padding-left: 10px; color:#475569; margin: 10px 0;">
+                <em>{APP_DESC}</em>
+            </blockquote>
+            <hr style="margin: 15px 0; border: none; border-top: 1px solid #E2E8F0;">
+            <strong>🚀 Keunggulan YOLO26:</strong>
+            <ul>
+                <li><strong>Native NMS-Free:</strong> Inferensi instan tanpa post-processing bottleneck (0.08 ms).</li>
+                <li><strong>MuSGD Optimizer:</strong> Konvergensi bobot model lebih stabil.</li>
+                <li><strong>Tanpa Distribution Focal Loss (DFL):</strong> Arsitektur kepala deteksi lebih ramping dan cepat.</li>
+            </ul>
+        </div>
+        """,
+        unsafe_allow_html=True,
     )
 
 with col2:
-    st.markdown("### 🏷️ Kelas yang Dideteksi")
-    for cls in CLASS_NAMES:
-        color = CLASS_COLORS[cls]
-        icons = {"bus": "🚌", "car": "🚗", "van": "🚐"}
+    st.markdown(
+        f"""
+        <div class="info-card" style="border-top: 4px solid #8B5CF6;">
+            <h3 style="margin-top:0;">📊 Dataset & Model Spec</h3>
+            <table style="width:100%; border-collapse: collapse; font-size: 0.95rem;">
+                <tr style="border-bottom: 1px solid #F1F5F9;">
+                    <td style="padding: 8px 0; color: #64748B;">Nama Dataset</td>
+                    <td style="padding: 8px 0; font-weight: 600;">Vehicle Detection (Roboflow Universe)</td>
+                </tr>
+                <tr style="border-bottom: 1px solid #F1F5F9;">
+                    <td style="padding: 8px 0; color: #64748B;">Lisensi</td>
+                    <td style="padding: 8px 0; font-weight: 600;">Creative Commons CC BY 4.0</td>
+                </tr>
+                <tr style="border-bottom: 1px solid #F1F5F9;">
+                    <td style="padding: 8px 0; color: #64748B;">Jumlah Gambar</td>
+                    <td style="padding: 8px 0; font-weight: 600;">9.725 Gambar (19.334 Anotasi)</td>
+                </tr>
+                <tr style="border-bottom: 1px solid #F1F5F9;">
+                    <td style="padding: 8px 0; color: #64748B;">Kelas Objek</td>
+                    <td style="padding: 8px 0; font-weight: 600;">Bus, Car, Van</td>
+                </tr>
+                <tr style="border-bottom: 1px solid #F1F5F9;">
+                    <td style="padding: 8px 0; color: #64748B;">Input Resolution</td>
+                    <td style="padding: 8px 0; font-weight: 600;">640 × 640 piksel</td>
+                </tr>
+                <tr style="border-bottom: 1px solid #F1F5F9;">
+                    <td style="padding: 8px 0; color: #64748B;">Ukuran Model</td>
+                    <td style="padding: 8px 0; font-weight: 600;">21.8M Parameter (75.0 GFLOPs)</td>
+                </tr>
+                <tr style="border-bottom: 1px solid #F1F5F9;">
+                    <td style="padding: 8px 0; color: #64748B;">Status Model Lokal</td>
+                    <td style="padding: 8px 0; font-weight: 600;">{'✅ Tersedia (best.pt)' if MODEL_PATH.exists() else '⚠️ Model belum dimuat'}</td>
+                </tr>
+            </table>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+# ── Tech Stack ──────────────────────────────────────────────
+st.markdown("### 🛠️ Teknologi yang Digunakan")
+t1, t2, t3, t4 = st.columns(4)
+
+stacks = [
+    ("🧠", "Ultralytics YOLO26", "Detektor objek deep learning SOTA dengan inferensi NMS-free.", "#3B82F6"),
+    ("⚡", "Streamlit", "Framework UI modern berbasis Python untuk deployment analitik data.", "#EC4899"),
+    ("⚙️", "n8n Workflow", "Automation node menghubungkan inferensi model ke Google Sheets & Telegram.", "#10B981"),
+    ("📈", "Plotly Charts", "Visualisasi interaktif untuk grafik bar, pie, dan tren data.", "#F59E0B"),
+]
+
+for col, (icon, title, desc, border_color) in zip([t1, t2, t3, t4], stacks):
+    with col:
         st.markdown(
             f"""
-            <div style="
-                background: rgba(255,255,255,0.03);
-                border-left: 4px solid {color};
-                border-radius: 8px;
-                padding: 0.8rem 1rem;
-                margin-bottom: 0.6rem;
-            ">
-                <b style="color:{color};">{icons[cls]} {cls.upper()}</b>
-                <span style="color:#64748B; font-size:0.85rem; margin-left:8px;">
-                    Warna bounding box: <code>{color}</code>
-                </span>
+            <div class="info-card" style="border-top: 4px solid {border_color}; text-align: center; height: 100%;">
+                <div style="font-size: 2.2rem; margin-bottom: 0.5rem;">{icon}</div>
+                <div style="font-weight: 700; color: #0F172A; margin-bottom: 0.3rem;">{title}</div>
+                <div style="font-size: 0.85rem; color: #64748B;">{desc}</div>
             </div>
             """,
             unsafe_allow_html=True,
         )
-
-st.markdown("---")
-
-# ── Arsitektur ───────────────────────────────────────────────
-st.markdown("### 🏗️ Arsitektur Sistem")
-st.markdown(
-    """
-    ```
-    ┌─────────────┐     Upload      ┌─────────────────────┐
-    │    User     │ ─────────────►  │  Streamlit Frontend │
-    │  (Browser)  │                 │   (Vehicle Scope)   │
-    └─────────────┘                 └──────────┬──────────┘
-                                               │ Inference
-                                               ▼
-                                   ┌─────────────────────┐
-                                   │   YOLOv8 Model      │
-                                   │   (best.pt / MPS)   │
-                                   │                     │
-                                   │ ► Detect: car,van,bus│
-                                   │ ► Count per class   │
-                                   │ ► Draw bounding box │
-                                   └──────────┬──────────┘
-                                              │ Webhook POST
-                                              ▼
-                                   ┌─────────────────────┐
-                                   │    n8n Workflow      │
-                                   │  (Self-hosted)       │
-                                   │                     │
-                                   │ ► Log → Google Sheets│
-                                   │ ► Alert → Telegram  │
-                                   │   (jika traffic > N)│
-                                   └─────────────────────┘
-    ```
-    """
-)
-
-# ── Training Info ────────────────────────────────────────────
-st.markdown("---")
-st.markdown("### 🔬 Info Training")
-ti1, ti2 = st.columns(2)
-
-with ti1:
-    st.markdown(
-        """
-        | Parameter | Nilai |
-        |-----------|-------|
-        | Base Model | `yolo26m.pt` |
-        | Dataset | Vehicle Detection |
-        | Input Size | 640 × 640 px |
-        | Epochs | 50 |
-        | Batch Size | 16 |
-        | Optimizer | MuSGD (auto) |
-        | Learning Rate | 0.001 |
-        | Device | Apple MPS (M4 Pro) |
-        | Inference | NMS-free (end-to-end) |
-        """
-    )
-
-with ti2:
-    st.markdown(
-        """
-        | Augmentasi | Metode |
-        |-----------|--------|
-        | Brightness | ±0.3 |
-        | Contrast | ±0.3 |
-        | Saturation | ±0.3 |
-        | Gaussian Noise | σ=0.01 |
-        | Blur | kernel 3×3 |
-        | **Non-geometrik** | ✅ Tidak ada flip/rotate |
-        """
-    )
-
-# ── n8n Payload Schema ───────────────────────────────────────
-st.markdown("---")
-st.markdown("### 📡 n8n Webhook Payload Schema")
-st.code(
-    """{
-  "timestamp"      : "2026-05-24T10:30:00+07:00",
-  "image_name"     : "traffic_001.jpg",
-  "detections"     : {
-    "car" : 4,
-    "van" : 2,
-    "bus" : 1
-  },
-  "total_vehicles" : 7,
-  "avg_confidence" : 0.87,
-  "alert"          : false,
-  "alert_message"  : ""
-}""",
-    language="json",
-)
-
-st.markdown("---")
-st.caption(
-    f"🚗 {APP_NAME} v{APP_VERSION} · Capstone Project Module 4 · "
-    "Dibuat dengan ❤️ menggunakan YOLO26 + n8n + Streamlit"
-)

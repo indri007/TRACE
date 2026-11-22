@@ -1,5 +1,5 @@
 # ─────────────────────────────────────────────────────────
-#  pages/2_Dashboard.py — Analytics dashboard
+#  pages/2_Dashboard.py — Analytics dashboard (Colorful Light Theme)
 # ─────────────────────────────────────────────────────────
 import sys
 from datetime import datetime, timedelta
@@ -23,13 +23,22 @@ st.set_page_config(
 st.markdown(
     """
     <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;900&display=swap');
-    html, body, [class*="css"] { font-family: 'Inter', sans-serif; }
+    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+    html, body, [class*="css"] { 
+        font-family: 'Plus Jakarta Sans', sans-serif; 
+        color: #0F172A;
+    }
     [data-testid="metric-container"] {
-        background: linear-gradient(145deg, #111827, #1a2234);
-        border: 1px solid rgba(255,255,255,0.08);
-        border-radius: 12px;
-        padding: 1rem;
+        background: #FFFFFF;
+        border: 1px solid #E2E8F0;
+        border-radius: 16px;
+        padding: 1.2rem;
+        box-shadow: 0 4px 14px rgba(15, 23, 42, 0.04);
+        border-top: 4px solid #6366F1;
+    }
+    [data-testid="stSidebar"] {
+        background: linear-gradient(180deg, #F8FAFC 0%, #F1F5F9 100%);
+        border-right: 1px solid #E2E8F0;
     }
     #MainMenu, footer { visibility: hidden; }
     </style>
@@ -40,14 +49,15 @@ st.markdown(
 st.markdown(
     """
     <h1 style="
-        background: linear-gradient(90deg, #7B61FF, #00D4FF);
+        background: linear-gradient(90deg, #2563EB, #7C3AED, #EC4899);
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
         background-clip: text;
-        font-weight: 900;
+        font-weight: 800;
+        margin-bottom: 0.2rem;
     ">📊 Analytics Dashboard</h1>
-    <p style="color:#64748B; margin-bottom:1.5rem;">
-        History log deteksi kendaraan dari n8n / Google Sheets.
+    <p style="color:#64748B; margin-bottom:1.5rem; font-weight: 500;">
+        Pantau tren deteksi kendaraan dari log n8n dan Google Sheets secara real-time.
     </p>
     """,
     unsafe_allow_html=True,
@@ -129,13 +139,13 @@ if df_filtered.empty:
     st.stop()
 
 # ── KPI Metrics ──────────────────────────────────────────────
-st.markdown("### 🔢 Summary")
+st.markdown("### 🔢 Ringkasan Data")
 m1, m2, m3, m4, m5 = st.columns(5)
 m1.metric("Total Sesi", len(df_filtered))
 m2.metric("Total Kendaraan", int(df_filtered["total_vehicles"].sum()))
-m3.metric("Avg. Conf", f"{df_filtered['avg_confidence'].mean():.1%}")
-m4.metric("Peak (sesi)", int(df_filtered["total_vehicles"].max()))
-m5.metric("Avg/Sesi", f"{df_filtered['total_vehicles'].mean():.1f}")
+m3.metric("Avg. Confidence", f"{df_filtered['avg_confidence'].mean():.1%}")
+m4.metric("Peak per Sesi", int(df_filtered["total_vehicles"].max()))
+m5.metric("Rata-rata/Sesi", f"{df_filtered['total_vehicles'].mean():.1f}")
 
 st.markdown("---")
 
@@ -143,34 +153,34 @@ st.markdown("---")
 col_ts, col_pie = st.columns([2, 1])
 
 with col_ts:
-    st.markdown("#### 📈 Total Kendaraan per Sesi")
+    st.markdown("#### 📈 Tren Kendaraan per Sesi")
     df_sorted = df_filtered.sort_values("timestamp")
     fig_ts = go.Figure()
     fig_ts.add_trace(go.Scatter(
         x=df_sorted["timestamp"],
         y=df_sorted["total_vehicles"],
         mode="lines+markers",
-        line=dict(color="#00D4FF", width=2),
-        marker=dict(size=5, color="#00D4FF"),
+        line=dict(color="#4F46E5", width=2.5),
+        marker=dict(size=6, color="#4338CA"),
         fill="tozeroy",
-        fillcolor="rgba(0,212,255,0.07)",
+        fillcolor="rgba(79, 70, 229, 0.08)",
         name="Total Kendaraan",
     ))
     fig_ts.add_hline(
         y=df_filtered["total_vehicles"].mean(),
         line_dash="dash",
-        line_color="rgba(255,255,255,0.3)",
+        line_color="#94A3B8",
         annotation_text="Rata-rata",
     )
     fig_ts.update_layout(
-        template="plotly_dark",
+        template="plotly_white",
         plot_bgcolor="rgba(0,0,0,0)",
         paper_bgcolor="rgba(0,0,0,0)",
-        height=300,
+        height=320,
         margin=dict(t=20, b=20, l=0, r=0),
-        font=dict(family="Inter"),
+        font=dict(family="Plus Jakarta Sans", color="#1E293B"),
         xaxis=dict(showgrid=False),
-        yaxis=dict(showgrid=True, gridcolor="rgba(255,255,255,0.05)"),
+        yaxis=dict(showgrid=True, gridcolor="rgba(15,23,42,0.06)"),
     )
     st.plotly_chart(fig_ts, use_container_width=True)
 
@@ -180,18 +190,18 @@ with col_pie:
     fig_pie = go.Figure(go.Pie(
         labels=[c.upper() for c in class_totals.keys()],
         values=list(class_totals.values()),
-        marker=dict(colors=list(CLASS_COLORS.values())),
+        marker=dict(colors=[CLASS_COLORS[c] for c in class_totals.keys()]),
         hole=0.55,
         textinfo="label+percent",
-        textfont=dict(size=13),
+        textfont=dict(size=13, family="Plus Jakarta Sans"),
     ))
     fig_pie.update_layout(
-        template="plotly_dark",
+        template="plotly_white",
         plot_bgcolor="rgba(0,0,0,0)",
         paper_bgcolor="rgba(0,0,0,0)",
-        height=300,
+        height=320,
         margin=dict(t=20, b=20, l=20, r=20),
-        font=dict(family="Inter"),
+        font=dict(family="Plus Jakarta Sans", color="#1E293B"),
         showlegend=False,
     )
     st.plotly_chart(fig_pie, use_container_width=True)
@@ -212,18 +222,18 @@ fig_bar = px.bar(
     color="Kelas",
     color_discrete_map=CLASS_COLORS,
     barmode="stack",
-    template="plotly_dark",
+    template="plotly_white",
     title=None,
 )
 fig_bar.update_layout(
     plot_bgcolor="rgba(0,0,0,0)",
     paper_bgcolor="rgba(0,0,0,0)",
-    height=280,
+    height=300,
     margin=dict(t=10, b=20, l=0, r=0),
-    font=dict(family="Inter"),
+    font=dict(family="Plus Jakarta Sans", color="#1E293B"),
     legend=dict(orientation="h", y=-0.2),
     xaxis=dict(showgrid=False),
-    yaxis=dict(showgrid=True, gridcolor="rgba(255,255,255,0.05)"),
+    yaxis=dict(showgrid=True, gridcolor="rgba(15,23,42,0.06)"),
 )
 st.plotly_chart(fig_bar, use_container_width=True)
 
@@ -233,23 +243,23 @@ fig_hist = px.histogram(
     df_filtered,
     x="avg_confidence",
     nbins=20,
-    template="plotly_dark",
-    color_discrete_sequence=["#7B61FF"],
+    template="plotly_white",
+    color_discrete_sequence=["#8B5CF6"],
 )
 fig_hist.update_layout(
     plot_bgcolor="rgba(0,0,0,0)",
     paper_bgcolor="rgba(0,0,0,0)",
-    height=220,
+    height=240,
     margin=dict(t=10, b=20, l=0, r=0),
-    font=dict(family="Inter"),
+    font=dict(family="Plus Jakarta Sans", color="#1E293B"),
     xaxis_title="Avg Confidence",
     yaxis_title="Frekuensi",
-    yaxis=dict(showgrid=True, gridcolor="rgba(255,255,255,0.05)"),
+    yaxis=dict(showgrid=True, gridcolor="rgba(15,23,42,0.06)"),
 )
 st.plotly_chart(fig_hist, use_container_width=True)
 
 # ── Raw Data Table ───────────────────────────────────────────
-with st.expander("📋 Raw Data"):
+with st.expander("📋 Raw Data Log"):
     st.dataframe(
         df_filtered.sort_values("timestamp", ascending=False).reset_index(drop=True),
         use_container_width=True,

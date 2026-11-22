@@ -34,58 +34,67 @@ st.set_page_config(
 st.markdown(
     """
     <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;900&display=swap');
-    html, body, [class*="css"] { font-family: 'Inter', sans-serif; }
+    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+    html, body, [class*="css"] { 
+        font-family: 'Plus Jakarta Sans', sans-serif; 
+        color: #0F172A;
+    }
 
     .result-card {
-        background: linear-gradient(145deg, #111827, #1a2234);
-        border: 1px solid rgba(255,255,255,0.08);
-        border-radius: 16px;
+        background: #FFFFFF;
+        border: 1px solid #E2E8F0;
+        border-radius: 20px;
         padding: 1.5rem;
         margin-bottom: 1rem;
+        box-shadow: 0 4px 16px rgba(15, 23, 42, 0.05);
     }
     .count-badge {
-        background: linear-gradient(135deg, rgba(0,212,255,0.1), rgba(123,97,255,0.1));
-        border: 1px solid rgba(0,212,255,0.3);
-        border-radius: 12px;
-        padding: 1rem;
+        background: linear-gradient(135deg, #F8FAFC 0%, #EEF2FF 100%);
+        border: 1px solid #E0E7FF;
+        border-radius: 16px;
+        padding: 1.2rem;
         text-align: center;
+        box-shadow: 0 4px 12px rgba(99, 102, 241, 0.06);
+        transition: transform 0.2s ease;
+    }
+    .count-badge:hover {
+        transform: translateY(-2px);
     }
     .count-number {
         font-size: 2.8rem;
-        font-weight: 900;
-        background: linear-gradient(90deg, #00D4FF, #7B61FF);
+        font-weight: 800;
+        background: linear-gradient(90deg, #2563EB, #7C3AED);
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
         background-clip: text;
+        line-height: 1.1;
     }
     .count-label {
         font-size: 0.85rem;
         color: #64748B;
-        font-weight: 600;
+        font-weight: 700;
         text-transform: uppercase;
-        letter-spacing: 0.05em;
-    }
-    .detection-tag {
-        display: inline-block;
-        padding: 4px 12px;
-        border-radius: 999px;
-        font-size: 0.8rem;
-        font-weight: 600;
-        margin: 2px;
+        letter-spacing: 0.06em;
+        margin-top: 0.2rem;
     }
     .upload-zone {
-        border: 2px dashed rgba(0,212,255,0.3);
-        border-radius: 16px;
-        padding: 2rem;
+        border: 2px dashed #818CF8;
+        border-radius: 20px;
+        padding: 2.2rem;
         text-align: center;
-        background: rgba(0,212,255,0.03);
+        background: linear-gradient(135deg, #EEF2FF 0%, #FAF5FF 100%);
+        box-shadow: 0 4px 15px rgba(99, 102, 241, 0.05);
     }
     [data-testid="metric-container"] {
-        background: linear-gradient(145deg, #111827, #1a2234);
-        border: 1px solid rgba(255,255,255,0.08);
-        border-radius: 12px;
-        padding: 1rem;
+        background: #FFFFFF;
+        border: 1px solid #E2E8F0;
+        border-radius: 16px;
+        padding: 1.2rem;
+        box-shadow: 0 2px 10px rgba(15, 23, 42, 0.04);
+    }
+    [data-testid="stSidebar"] {
+        background: linear-gradient(180deg, #F8FAFC 0%, #F1F5F9 100%);
+        border-right: 1px solid #E2E8F0;
     }
     #MainMenu, footer { visibility: hidden; }
     </style>
@@ -97,14 +106,16 @@ st.markdown(
 st.markdown(
     """
     <h1 style="
-        background: linear-gradient(90deg, #00D4FF, #7B61FF);
+        background: linear-gradient(90deg, #2563EB, #7C3AED, #EC4899);
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
         background-clip: text;
-        font-weight: 900;
+        font-weight: 800;
         margin-bottom: 0.2rem;
     ">🎯 Vehicle Detection</h1>
-    <p style="color:#64748B; margin-bottom:1.5rem;">Upload gambar lalu biarkan YOLOv8 mendeteksi & menghitung kendaraan.</p>
+    <p style="color:#64748B; margin-bottom:1.5rem; font-weight: 500;">
+        Upload gambar lalu biarkan model YOLO26 mendeteksi & menghitung kendaraan secara real-time.
+    </p>
     """,
     unsafe_allow_html=True,
 )
@@ -126,7 +137,7 @@ with st.sidebar:
         max_value=0.90,
         value=DEFAULT_IOU,
         step=0.05,
-        help="Threshold untuk Non-Maximum Suppression.",
+        help="Threshold untuk Non-Maximum Suppression (opsional pada YOLO26).",
     )
 
     st.markdown("---")
@@ -158,12 +169,12 @@ if uploaded_file is None:
     st.markdown(
         """
         <div class="upload-zone">
-            <p style="font-size:2rem; margin:0;">📷</p>
-            <p style="color:#64748B; margin:0.5rem 0 0;">
-                Drag & drop gambar di sini, atau klik tombol di atas
+            <p style="font-size:2.4rem; margin:0;">📷</p>
+            <p style="color:#334155; font-size:1.05rem; font-weight:600; margin:0.6rem 0 0;">
+                Drag & drop gambar di sini, atau klik tombol Browse
             </p>
-            <p style="color:#374151; font-size:0.75rem; margin:0.3rem 0 0;">
-                JPG · PNG · WebP
+            <p style="color:#64748B; font-size:0.85rem; margin:0.3rem 0 0;">
+                Mendukung resolusi tinggi · Format JPG, PNG, WebP
             </p>
         </div>
         """,
@@ -181,13 +192,13 @@ with col_img:
     st.image(image, use_container_width=True, caption=uploaded_file.name)
 
 with col_result:
-    with st.spinner("🔍 Mendeteksi kendaraan..."):
+    with st.spinner("🔍 Mendeteksi kendaraan dengan YOLO26..."):
         t0 = time.perf_counter()
         annotated_img, counts, detections = run_inference(image, conf_thresh, iou_thresh)
         elapsed = time.perf_counter() - t0
 
-    st.markdown(f"**✅ Hasil Deteksi** &nbsp; <span style='color:#64748B;font-size:0.8rem;'>({elapsed*1000:.0f} ms)</span>", unsafe_allow_html=True)
-    st.image(annotated_img, use_container_width=True, caption="Hasil anotasi YOLOv8")
+    st.markdown(f"**✅ Hasil Deteksi** &nbsp; <span style='color:#6366F1; font-weight:600; font-size:0.85rem;'>({elapsed*1000:.0f} ms)</span>", unsafe_allow_html=True)
+    st.image(annotated_img, use_container_width=True, caption="Hasil Anotasi YOLO26")
 
     # Tombol download annotated image
     buf = io.BytesIO()
@@ -216,9 +227,9 @@ for col, (cls, emoji) in zip(
         st.markdown(
             f"""
             <div class="count-badge">
-                <div style="font-size:1.8rem;">{emoji}</div>
+                <div style="font-size:2rem;">{emoji}</div>
                 <div class="count-number" style="
-                    background: linear-gradient(90deg, {color}, {color}aa);
+                    background: linear-gradient(90deg, {color}, {color});
                     -webkit-background-clip: text;
                     -webkit-text-fill-color: transparent;
                     background-clip: text;
@@ -233,8 +244,13 @@ with c_total:
     st.markdown(
         f"""
         <div class="count-badge">
-            <div style="font-size:1.8rem;">🚦</div>
-            <div class="count-number">{total}</div>
+            <div style="font-size:2rem;">🚦</div>
+            <div class="count-number" style="
+                background: linear-gradient(90deg, #2563EB, #7C3AED, #EC4899);
+                -webkit-background-clip: text;
+                -webkit-text-fill-color: transparent;
+                background-clip: text;
+            ">{total}</div>
             <div class="count-label">Total</div>
         </div>
         """,
@@ -247,7 +263,7 @@ if detections:
     summary_text  = ", ".join(summary_parts)
     st.success(f"🔎 Terdeteksi: {summary_text} — Total **{total} kendaraan**")
 else:
-    st.warning("⚠️ Tidak ada kendaraan yang terdeteksi. Coba turunkan Confidence Threshold.")
+    st.warning("⚠️ Tidak ada kendaraan yang terdeteksi. Coba sesuaikan Confidence Threshold.")
 
 # ── Bar Chart ────────────────────────────────────────────────
 if detections:
@@ -261,16 +277,16 @@ if detections:
         color="Kelas",
         color_discrete_map={k.upper(): v for k, v in CLASS_COLORS.items()},
         text="Jumlah",
-        template="plotly_dark",
-        title="Distribusi Kendaraan",
+        template="plotly_white",
+        title="Distribusi Kendaraan Terdeteksi",
     )
     fig.update_traces(textposition="outside", marker_line_width=0)
     fig.update_layout(
         showlegend=False,
         plot_bgcolor="rgba(0,0,0,0)",
         paper_bgcolor="rgba(0,0,0,0)",
-        font=dict(family="Inter"),
-        yaxis=dict(showgrid=True, gridcolor="rgba(255,255,255,0.05)"),
+        font=dict(family="Plus Jakarta Sans", color="#1E293B"),
+        yaxis=dict(showgrid=True, gridcolor="rgba(15,23,42,0.06)"),
         height=280,
         margin=dict(t=40, b=20, l=0, r=0),
     )
@@ -278,7 +294,7 @@ if detections:
 
 # ── Detail Table ─────────────────────────────────────────────
 if detections:
-    with st.expander("📋 Detail Semua Deteksi"):
+    with st.expander("📋 Detail Bounding Box Deteksi"):
         df_det = pd.DataFrame(
             [
                 {
@@ -299,7 +315,7 @@ with col_log1:
     st.markdown("### 📡 Log ke n8n")
     st.caption(
         "Kirim hasil deteksi ini ke n8n untuk di-log ke Google Sheets "
-        "dan memicu alert jika traffic padat."
+        "dan memicu alert jika traffic padat (>10 kendaraan)."
     )
 
 with col_log2:
