@@ -17,9 +17,9 @@ convolutional neural networks (CNNs).
 The progression from hand-crafted features (HOG, SIFT, Haar cascades) to end-to-end
 learned representations dramatically improved detection accuracy and reduced the
 engineering effort required to adapt a system to a new camera viewpoint or lighting
-condition \cite{TODO-dl-survey-general}.
+condition \cite{liu2020deep}.
 Datasets such as KITTI, Cityscapes, and VisDrone have provided shared benchmarks that
-allow fair comparison across methods \cite{TODO-kitti,TODO-visdrone}.
+allow fair comparison across methods \cite{geiger2012kitti,zhu2021visdrone}.
 In the vehicle-specific domain, \citet{berwo2023sensors} survey more than 150 papers
 and find that YOLO-family models account for the majority of recent applied work,
 followed by Faster~R-CNN and SSD variants.
@@ -29,7 +29,7 @@ followed by Faster~R-CNN and SSD variants.
 % -------------------------------------------------------------------------
 
 Object detectors are broadly divided into two-stage and one-stage architectures.
-Two-stage detectors, exemplified by the R-CNN family \cite{TODO-rcnn}, first generate
+Two-stage detectors, exemplified by the R-CNN family \cite{ren2015faster}, first generate
 a set of region proposals using a lightweight region-proposal network (RPN) and then
 classify and refine each proposal in a second stage.
 This approach typically achieves high accuracy but introduces additional latency
@@ -38,13 +38,13 @@ because two sequential networks must be evaluated.
 One-stage detectors bypass the proposal stage and predict bounding boxes and class
 labels in a single forward pass over a dense grid of anchor boxes or anchor-free
 points.
-SSD \cite{TODO-ssd} and RetinaNet \cite{TODO-retinanet} are canonical one-stage
+SSD \cite{liu2016ssd} and RetinaNet \cite{lin2017focal} are canonical one-stage
 architectures; RetinaNet introduced Focal Loss to address the class-imbalance problem
 that arises when most grid cells do not contain an object.
 One-stage detectors are generally faster than two-stage alternatives, which makes them
 attractive for real-time video analysis on embedded or edge hardware.
 
-Transformer-based detectors such as DETR \cite{TODO-detr} and its successors use
+Transformer-based detectors such as DETR \cite{carion2020end} and its successors use
 attention mechanisms to model global context and can predict a fixed-size set of
 objects without anchor boxes.
 RT-DETR \cite{rtdetr2022} demonstrated that a transformer encoder-decoder can achieve
@@ -55,7 +55,7 @@ it a natural baseline for NMS-free comparison in this study.
 \subsection{The YOLO Family and YOLO26}
 % -------------------------------------------------------------------------
 
-The original YOLO \cite{TODO-yolov1} framed detection as a single regression problem
+The original YOLO \cite{redmon2016you} framed detection as a single regression problem
 over a grid of cells, achieving speeds far higher than contemporary two-stage methods
 at the cost of some accuracy, particularly on small objects.
 Subsequent versions progressively closed the accuracy gap: YOLOv2 introduced anchor
@@ -66,12 +66,12 @@ YOLOv8 (Ultralytics, 2023) replaced anchor-based assignment with a task-aligned
 assigner and an anchor-free head, achieving state-of-the-art results on COCO while
 remaining easy to fine-tune on custom datasets.
 YOLO11 further refined the backbone with depthwise-separable convolutions to reduce
-parameter count without sacrificing accuracy \cite{TODO-yolo11}.
+parameter count without sacrificing accuracy \cite{ultralytics_yolo11}.
 
 A recent line of work targets NMS-free inference.
 NMS is a post-processing operation that suppresses duplicate detections by iteratively
 keeping the highest-scoring box and discarding all boxes whose IoU with it exceeds a
-threshold \cite{TODO-nms-free}.
+threshold \cite{wang2024yolov10}.
 Although NMS is effective, it adds latency proportional to the number of candidate
 boxes and requires a hand-tuned IoU threshold that affects the precision-recall
 trade-off.
@@ -96,7 +96,7 @@ Traffic in South and Southeast Asia presents distinctive challenges compared wit
 Western scenarios that dominate published benchmarks.
 The vehicle mix is more heterogeneous: rigid buses, minibuses, vans used as shared
 taxis, motorcycles, and non-motorised vehicles share the same road space, often
-without clear lane discipline \cite{TODO-sea-traffic}.
+without clear lane discipline \cite{amin2021traffic}.
 Class boundaries are less sharp; a large van may be visually indistinguishable from a
 small bus at the resolutions typical of roadside cameras.
 
@@ -106,14 +106,14 @@ adequately.
 Detectors trained on the 80-class COCO taxonomy consistently underperform when applied
 to such scenes because the COCO vehicle classes (\textit{car}, \textit{truck},
 \textit{bus}, \textit{motorcycle}) do not map cleanly onto regional vehicle types
-\cite{TODO-domain-shift}.
+\cite{chen2018domain}.
 
 The dataset used in this study covers three classes (\textit{bus}, \textit{car},
 \textit{van}) collected from heterogeneous traffic scenes and exported from Roboflow
 Universe under a Creative Commons CC~BY~4.0 licence \cite{roboflow_dataset}.
 The training split contains 9\,218 images and 18\,494 instances, giving an average
 density of approximately 2.0 instances per image.
-This density is higher than VisDrone (mean 1.3) \cite{TODO-visdrone} and reflects the
+This density is higher than VisDrone (mean 1.3) \cite{zhu2021visdrone} and reflects the
 congested, multi-vehicle scenes typical of the source footage.
 Our per-class results (Section~\ref{sec:results}) show that \textit{van} is the
 hardest class, with the lowest AP$_{50}$ and the highest rate of misclassification as
@@ -130,7 +130,7 @@ Label errors — including mislabelled classes, missing boxes, and incorrect box
 coordinates — are known to distort benchmark metrics even in carefully curated
 datasets \cite{labelerror2023}.
 Northcutt et al.\ estimate that approximately 3.4\,\% of labels in common benchmark
-datasets contain some form of error \cite{TODO-northcutt-label-errors}.
+datasets contain some form of error \cite{northcutt2021pervasive}.
 
 A less-studied category of label error arises not from annotator mistakes but from
 format incompatibilities in the data pipeline.
@@ -145,16 +145,16 @@ approximations without raising an error.
 This behaviour means that a single misformatted annotation can corrupt every other
 annotation in the same file.
 To our knowledge, this specific failure mode has not been reported or quantified in
-the published literature \cite{TODO-ultralytics-label-bug}.
+the published literature \cite{ultralytics_repo}.
 
 Domain shift — the degradation in model performance when the training and test
 distributions differ — is a well-recognised problem in applied object detection
-\cite{TODO-domain-shift}.
+\cite{chen2018domain}.
 Common sources of shift include changes in camera angle, lighting, weather, and
 geographic location.
 Unsupervised domain adaptation (UDA) and domain-randomisation augmentation have been
 proposed to mitigate the gap, but they typically require access to unlabelled target
-data \cite{TODO-uda}.
+data \cite{chen2018domain}.
 This study does not perform domain adaptation; instead, we quantify the cross-domain
 gap as a limitation and propose it as future work.
 

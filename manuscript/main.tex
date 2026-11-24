@@ -18,9 +18,9 @@
 \begin{document}
 \maketitle
 
-% Abstract placeholder (to be filled later)
+% Abstract
 \begin{abstract}
-[ABSTRACT TO BE COMPLETED]
+Automated vehicle detection and counting are critical components of intelligent transportation systems (ITS). While one-stage detectors such as the You Only Look Once (YOLO) family dominate real-time video surveillance, practical deployments frequently suffer from non-maximum suppression (NMS) latency bottlenecks, domain shift in heterogeneous traffic, and undetected annotation corruptions within community datasets. In this paper, we evaluate YOLO26m---an end-to-end detector incorporating a dual-head assignment strategy for native NMS-free inference---on a public vehicle detection dataset comprising 9\,725 images and 19\,334 instances across three classes (\textit{bus}, \textit{car}, \textit{van}). We identify and document a silent label-parsing failure in community YOLO exports where mixed bounding-box and polygon rows cause bounding boxes to be silently misread as degenerate polygons without raising pipeline warnings, and we introduce an open-source audit and conversion protocol to ensure dataset integrity. On the held-out test set, the deployed YOLO26m detector achieves a precision of 0.845, recall of 0.752, $\text{mAP}_{50}$ of 0.784, and $\text{mAP}_{50:95}$ of 0.594, with near-instantaneous post-processing latency of 0.08\,ms per image. A TIDE-style error diagnosis reveals that missed detections (20.1\,\%) and fine-grained visual ambiguity between vans and cars constitute the dominant error modes, while localization errors remain negligible. Finally, we demonstrate a low-cost, edge-compatible deployment stack integrating a Streamlit dashboard, an n8n automation webhook, Google Sheets logging, and real-time Telegram traffic alerts, achieving a practical end-to-end latency of 99.1\,ms on commodity CPU hardware.
 \end{abstract}
 
 % Include modular sections

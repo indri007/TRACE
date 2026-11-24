@@ -327,12 +327,18 @@ def train_one(name: str, weights: str, loader: str, aug: dict, seed: int, yaml: 
         log(f"skip {name} seed {seed} (already done)")
         return json.loads(done.read_text())
     Model = getattr(ultralytics, loader)
-    model = Model(weights)
-    cfg = {**BASE_TRAIN, **aug, "epochs": epochs, "batch": batch, "seed": seed}
-    log(f"training {name} seed {seed}: {weights}, epochs={epochs}, batch={batch}")
+    last_pt = run_dir / "weights" / "last.pt"
     t0 = time.time()
-    model.train(data=str(yaml), project=str(run_dir.parent), name=run_dir.name, exist_ok=True,
-                plots=True, verbose=False, device=DEVICE, **cfg)
+    if last_pt.exists():
+        log(f"resuming {name} seed {seed} from {last_pt}")
+        model = Model(str(last_pt))
+        model.train(resume=True)
+    else:
+        model = Model(weights)
+        cfg = {**BASE_TRAIN, **aug, "epochs": epochs, "batch": batch, "seed": seed}
+        log(f"training {name} seed {seed}: {weights}, epochs={epochs}, batch={batch}")
+        model.train(data=str(yaml), project=str(run_dir.parent), name=run_dir.name, exist_ok=True,
+                    plots=True, verbose=False, device=DEVICE, **cfg)
     train_min = (time.time() - t0) / 60
     best = Path(model.trainer.best)
     res = evaluate(str(best), yaml, "test", out, f"{name}_s{seed}_test", loader)

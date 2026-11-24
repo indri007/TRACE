@@ -8,30 +8,30 @@
 Vehicle detection is a foundational task in intelligent transportation systems (ITS).
 Accurate, real-time identification of vehicle types enables a wide range of applications,
 including traffic-flow estimation, parking management, road-capacity planning, and
-automated enforcement \cite{TODO-ITS-survey}.
+automated enforcement \cite{dilek2023sensors}.
 Camera-based detection has become the preferred approach because a single fixed or
 mobile camera can substitute for multiple inductive-loop sensors while simultaneously
 capturing richer information such as vehicle class, speed, and trajectory
-\cite{TODO-camera-vs-loop}.
+\cite{leduc2008road}.
 
 Deep convolutional neural networks have transformed object detection since the
-introduction of region-based convolutional networks \cite{TODO-rcnn}.
+introduction of region-based convolutional networks \cite{ren2015faster}.
 Among detector families, the \textit{You Only Look Once} (YOLO) series has gained
 particular traction in real-time applications because its single-stage design
 processes the entire image in one forward pass, achieving a favourable trade-off
-between accuracy and inference speed \cite{TODO-yolo-survey}.
+between accuracy and inference speed \cite{terven2023mlke}.
 Successive YOLO generations have improved backbone efficiency, neck design, and
 training strategies while keeping inference costs manageable on commodity hardware.
 
 A recent architectural trend abandons non-maximum suppression (NMS) during inference.
 NMS is a post-processing step that removes duplicate bounding boxes, but it introduces
 additional latency and requires a manually tuned score threshold that affects
-precision-recall balance \cite{TODO-nms-free}.
+precision-recall balance \cite{wang2024yolov10}.
 NMS-free detectors instead assign predictions during training so that only one
 prediction per object survives at inference time.
 The YOLO26 architecture, used in this study, adopts a dual-head assignment strategy
 to achieve NMS-free inference together with the removal of Distribution Focal Loss and
-the introduction of the MuSGD optimiser \cite{TODO-yolo26}.
+the introduction of the MuSGD optimiser \cite{yolo262023}.
 We use the medium-scale variant YOLO26m (21.78 GFLOPs, 74.70\,M parameters, 42.0\,MB
 weights), as confirmed by the model-size measurements in our experiment harness.
 
@@ -46,7 +46,7 @@ problems limit how well published results transfer to real traffic deployments.
 Traffic composition and scene geometry vary substantially across regions.
 South and Southeast Asian traffic contains vehicle types that are rare or absent in
 Western benchmarks, including buses of varying sizes, vans used as informal taxis, and
-motorcycles mixed with heavy goods vehicles \cite{TODO-domain-shift}.
+motorcycles mixed with heavy goods vehicles \cite{amin2021traffic}.
 Detectors trained on generic datasets typically lose accuracy when applied to such
 scenes, yet many applied studies train and test on a single domain and do not measure
 this loss.
@@ -65,7 +65,7 @@ sources and may contain annotations stored in different formats.
 In Ultralytics~8.x, a label file that contains both bounding-box rows (five values per
 row) and polygon rows (more than five values per row) is parsed entirely as a polygon
 file; bounding-box rows are silently reinterpreted as degenerate polygons, producing
-incorrect boxes without any error message \cite{TODO-ultralytics-label-bug}.
+incorrect boxes without any error message \cite{ultralytics_repo}.
 Our audit of the training split identified three label files in which this condition
 holds (81 polygon rows mixed among 18\,413 bounding-box rows), all in the
 \textit{bus} class.
