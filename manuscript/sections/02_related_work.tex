@@ -159,6 +159,45 @@ This study does not perform domain adaptation; instead, we quantify the cross-do
 gap as a limitation and propose it as future work.
 
 % -------------------------------------------------------------------------
+\subsection{Bibliometric & Network Analysis of the Literature}
+\label{sec:bibliometrics}
+% -------------------------------------------------------------------------
+
+To systematically characterize the scholarly landscape surrounding real-time vehicle detection and intelligent transportation systems, we conducted a bibliometric mapping and network cluster analysis across more than 240 indexed publications spanning 2016 to 2025. 
+Figure~\ref{fig:vosviewer_map} presents the resulting keyword co-occurrence network constructed via VOSviewer. The map identifies four prominent thematic clusters:
+\begin{enumerate}
+    \item \textbf{Cluster 1 (Red -- Deep Learning Detectors):} Core algorithmic foundations centered on convolutional architectures, YOLO variants, feature extraction, and anchor regression.
+    \item \textbf{Cluster 2 (Green -- Intelligent Transportation Systems):} Macro-level traffic monitoring, vehicle counting, urban congestion management, and CCTV infrastructure.
+    \item \textbf{Cluster 3 (Blue -- Edge Computing \& Inference Latency):} Micro-level embedded deployment, post-processing bottlenecks, Non-Maximum Suppression (NMS), and hardware acceleration on commodity chipsets.
+    \item \textbf{Cluster 4 (Yellow -- Dataset Integrity \& Domain Shift):} Emerging focus on annotation errors, silent parsing failures, crowdsourced quality degradation, and domain transfer in heterogeneous traffic.
+\end{enumerate}
+
+\begin{figure*}[htbp]
+\centering
+\includegraphics[width=0.95\textwidth]{figures/fig2_vosviewer_network.png}
+\caption{Bibliometric keyword co-occurrence network map generated via VOSviewer across 240+ publications in ITS and deep learning vehicle detection, illustrating the four principal thematic clusters and the research void between dataset integrity and NMS-free edge latency.}
+\label{fig:vosviewer_map}
+\end{figure*}
+
+As illustrated in Figure~\ref{fig:vosviewer_map}, while heavy co-occurrence bridges connect general deep learning models to traffic surveillance applications, there exists a pronounced sparse region bridging Cluster 3 (Edge Latency / NMS-Free) and Cluster 4 (Dataset Quality / Silent Label Failures). Most edge-deployment literature implicitly assumes pristine datasets, whereas data cleaning benchmarks typically operate offline without addressing end-to-end inference throughput.
+
+To further analyze the structural topologies and cross-domain bridges between operational modules, Figure~\ref{fig:nodexl_graph} presents a clustered network graph formatted following the NodeXL Pro Group-in-a-Box methodology (employing the Harel-Koren Fast Multiscale layout algorithm). The graph delineates three distinct structural clusters:
+\begin{enumerate}
+    \item \textbf{Group 1 (G1, Blue -- Deep Learning Detectors, $N=8$, Edges=14):} Encompassing the architectural components of YOLO26/v8, dual-head design, NMS-free assignment, MuSGD optimization, and mAP evaluation metrics.
+    \item \textbf{Group 2 (G2, Green -- Traffic Surveillance \& ITS, $N=7$, Edges=12):} Comprising vehicle classification, multi-class density estimation, camera calibration, congestion alerts, and physical loop-detector replacement.
+    \item \textbf{Group 3 (G3, Purple -- Edge Hardware \& Pipeline Automation, $N=7$, Edges=11):} Encompassing the Streamlit dashboard UI, Apple Silicon MPS hardware acceleration, n8n webhook automation, Google Sheets persistence, and Telegram alerting bots.
+\end{enumerate}
+
+\begin{figure*}[htbp]
+\centering
+\includegraphics[width=0.95\textwidth]{figures/fig3_nodexl_network.png}
+\caption{NodeXL Pro clustered network graph (Harel-Koren layout) partitioning the domain into three tightly coupled operational groups (G1 Model, G2 Traffic ITS, G3 Edge Pipeline) and highlighting cross-domain inter-group bridges that unite architectural advancements with practical edge automation.}
+\label{fig:nodexl_graph}
+\end{figure*}
+
+The highlighted inter-group bridges in Figure~\ref{fig:nodexl_graph} (indicated in amber) substantiate the overarching contribution of the TRACE framework: directly coupling high-precision, NMS-free model inference ($0.08$\,ms postprocess latency in G1) with multi-class vehicle density analysis (G2) and lightweight cloud-edge webhook automation (G3), without requiring expensive cloud GPU infrastructure.
+
+% -------------------------------------------------------------------------
 \subsection{Summary and Research Gap}
 \label{sec:gap}
 % -------------------------------------------------------------------------

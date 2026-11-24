@@ -7,6 +7,15 @@ This section describes the dataset and label-audit procedure
 (Section~\ref{sec:training}), and the deployment pipeline
 (Section~\ref{sec:deployment}).
 
+Figure~\ref{fig:pipeline_flowchart} provides an overview of the end-to-end TRACE methodology, organized into three cohesive operational phases: (1) Data Integrity \& Audit, where raw crowdsourced annotations are rigorously audited and repaired from silent polygon parsing failures; (2) Model Architecture \& Inference, detailing the YOLO26m backbone, dual-head loss formulation, and native NMS-free evaluation; and (3) Edge Deployment \& Telemetry, integrating the Streamlit user interface, n8n webhook dispatcher, cloud sheet logging, and automated Telegram alerts.
+
+\begin{figure*}[htbp]
+\centering
+\includegraphics[width=0.98\textwidth]{figures/fig1_pipeline_flowchart.png}
+\caption{End-to-end TRACE research methodology and system deployment flowchart, detailing the three core phases from raw dataset label-format audit to native NMS-free inference and real-time edge telemetry automation.}
+\label{fig:pipeline_flowchart}
+\end{figure*}
+
 % -------------------------------------------------------------------------
 \subsection{Dataset}
 \label{sec:data}
