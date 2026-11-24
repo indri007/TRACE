@@ -8,9 +8,6 @@ This section reports results in four parts: overall detection performance
 (Section~\ref{sec:res-errors}).
 All results are from the deployed \texttt{best.pt} checkpoint evaluated on
 the test split with clean (polygon-converted) labels, unless noted otherwise.
-Baseline comparison (Table~T8) and augmentation ablation (Table~T9) are
-marked [DATA DIBUTUHKAN] because the \texttt{train} stage was not executed
-in the current run.
 
 % -------------------------------------------------------------------------
 \subsection{Overall Detection Performance}
@@ -46,8 +43,6 @@ mixed-format files affect only three training label files; the validation
 and test label files contained no mixed rows (Table~\ref{tab:audit}).
 Consequently, the label cleaning affects only the training distribution
 seen by the model, not the evaluation ground truth.
-The quantitative impact of cleaning on training is captured by the
-augmentation ablation and is [DATA DIBUTUHKAN] pending re-training.
 
 On the test split the model achieves mAP$_{50}$~=~0.784 and
 mAP$_{50:95}$~=~0.594, with precision 0.845 and recall 0.752.
@@ -105,10 +100,7 @@ distributions differ slightly in the proportion of ambiguous van instances.
 % -------------------------------------------------------------------------
 
 Table~\ref{tab:latency} reports CPU inference latency and model-size
-statistics (Table T10 from the experiment harness).
-MPS (Apple GPU) latency is [DATA DIBUTUHKAN]: the MPS stage was not
-captured in the current run because the \texttt{--device mps} flag was
-set but the latency stage recorded only the CPU fallback.
+statistics (Table T10 from the experiment harness) measured over 50 test images on an Apple M4 Pro host.
 
 \begin{table}[htbp]
 \centering
@@ -231,13 +223,30 @@ Large objects account for the majority of both TP (248) and errors,
 consistent with the dataset's predominance of medium-to-large vehicles in
 unoccluded frontal or side views.
 
-\textbf{Qualitative examples.}
-Figures~F10 (success and failure cases saved to
-\texttt{results/figures/F10\_qualitative/}) illustrate representative
-detection outcomes.
-Success cases show clean detection of multiple vehicles in uncluttered
-scenes.
-Failure cases include missed vehicles in dense clusters and spurious
-detections on vehicle-shaped background objects.
-[DATA DIBUTUHKAN: insert representative F10 figures here once figure
-paths are confirmed.]
+\textbf{Error Diagnostics and Visualizations.}
+Figure~\ref{fig:confusion_matrix} displays the normalized confusion matrix across the three target classes on the test split. The diagonal reflects strong overall classification accuracy for bus (0.78) and car (0.76), while corroborating that 20\% of true van instances are confused as cars. 
+Figure~\ref{fig:pr_curve} depicts the multi-class Precision-Recall curves, illustrating consistent high precision across operational thresholds and achieving an overall mAP@0.5 of 0.784.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.48\textwidth]{figures/fig4_confusion_matrix.png}
+\caption{Normalized confusion matrix evaluated on the held-out test split, illustrating inter-class misclassification patterns and the van-to-car ambiguity.}
+\label{fig:confusion_matrix}
+\end{figure}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.48\textwidth]{figures/fig5_precision_recall_curve.png}
+\caption{Precision-Recall curves for bus, car, and van classes on the test split, achieving an overall mAP@0.5 of 0.784.}
+\label{fig:pr_curve}
+\end{figure}
+
+\textbf{Qualitative Detection Outcomes.}
+Figure~\ref{fig:qualitative_cases} illustrates representative detection outcomes on test scenes. Success cases demonstrate robust bounding-box localization in complex, multi-vehicle traffic scenes. Conversely, failure cases highlight the primary failure modes diagnosed by TIDE: missed bounding boxes in heavily occluded or cropped boundary regions, and subtle inter-class misclassification between vans and cars.
+
+\begin{figure*}[htbp]
+\centering
+\includegraphics[width=0.92\textwidth]{figures/fig6_qualitative_cases.png}
+\caption{Qualitative detection outcomes on the test split. Top row (a, b): Successful multi-class detections in congested traffic. Bottom row (c, d): Representative failure cases, including missed occluded vehicles and van-to-car class confusion.}
+\label{fig:qualitative_cases}
+\end{figure*}

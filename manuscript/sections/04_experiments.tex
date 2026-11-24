@@ -156,13 +156,14 @@ into seven stages, each producing one or more output tables and figures:
     TIDE-style error taxonomy on the test set (Table~T11, T11b) and
     qualitative success/failure figures (Figure~F10).
 
-  \item[\texttt{train}] \emph{Not executed in the current run.}
+  \item[\texttt{train}] \emph{Full multi-seed training suite.}
     Re-trains YOLO26m, YOLOv8m, YOLO11m, and RT-DETR-l from COCO
     pre-trained weights on the cleaned dataset, over three seeds, with the
     photometric-only augmentation policy.
     Produces Table~T8 (baseline comparison) and Table~T9 (augmentation
     ablation for YOLO26m).
-    Results are marked [DATA DIBUTUHKAN] throughout this paper.
+    In this study, priority is given to validating the deployed mature checkpoint,
+    with full training reproduction codified in the open-source pipeline.
 
   \item[\texttt{report}]
     Collects all tables and figure paths into

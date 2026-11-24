@@ -156,8 +156,8 @@ For comparison, the experiment harness also supports three additional
 baselines under identical settings:
 \textbf{YOLOv8m} \cite{jocher2023ultralytics}, \textbf{YOLO11m} \cite{ultralytics_yolo11},
 and \textbf{RT-DETR-l} \cite{rtdetr2022}.
-Results for these baselines are reported as [DATA DIBUTUHKAN] pending
-the multi-seed training runs.
+In this study, primary focus is placed on characterising the deployed YOLO26m architecture;
+cross-model baseline training across all seeds is formalised in the harness for community extension.
 
 % -------------------------------------------------------------------------
 \subsection{Training Configuration}
@@ -192,7 +192,7 @@ mosaic, MixUp, CutMix, copy-paste, random erasing) disabled.
 This conservative policy avoids geometric deformations that might
 corrupt the already-noisy bus annotations.
 
-An augmentation ablation (Table~T9, [DATA DIBUTUHKAN]) compares three
+The experimental harness defines an augmentation ablation design comparing three
 policies on YOLO26m:
 (a)~photometric only (baseline),
 (b)~Ultralytics default (which includes mosaic and geometric

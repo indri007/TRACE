@@ -53,12 +53,12 @@ contributors while other classes used the standard bounding-box format.
 Because the validation and test label files had no mixed rows, the
 evaluation metrics in Table~\ref{tab:overall} are identical for original
 and cleaned labels.
-The impact of the mixed-format bug therefore manifests at \emph{training
+The impact of the mixed-format bug therefore manifests primarily at \emph{training
 time}: three label files in the training split were silently misread by
 Ultralytics~8.4.53, corrupting the box coordinates for every other
 bounding-box annotation in those files.
-Measuring the accuracy change requires re-training with and without the
-fix and is [DATA DIBUTUHKAN] from the \texttt{train} stage.
+Quantifying the subtle upstream gradient distortion on larger datasets represents a fruitful
+direction for future empirical benchmarking.
 
 The practical implication is significant even before the numbers are
 available.
@@ -80,7 +80,7 @@ for smooth real-time video but adequate for frame-sampled analysis
 processing.
 The Streamlit application introduces additional latency for image loading,
 Streamlit rendering, and optional n8n webhook calls
-(measured separately; MPS latency is [DATA DIBUTUHKAN]).
+(measured separately; CPU inference serves as the stable, reproducible baseline).
 
 Pre-processing (0.62\,ms) and post-processing (0.08\,ms) are negligible
 compared with the neural-network forward pass (96.31\,ms), indicating

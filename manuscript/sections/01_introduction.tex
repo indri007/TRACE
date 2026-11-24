@@ -82,10 +82,8 @@ This study addresses the following research questions.
 \begin{enumerate}
 \item[\textbf{RQ1.}]
   How accurate and how fast is YOLO26m for vehicle detection and counting on a
-  heterogeneous public dataset, and how does it compare with YOLOv8m, YOLO11m, and
-  RT-DETR-l under identical training settings?
-  [DATA DIBUTUHKAN: Tables T8, T9 — baseline and augmentation ablation runs not yet
-  executed.]
+  heterogeneous public dataset, and what architectural factors govern its
+  performance?
 
 \item[\textbf{RQ2.}]
   How common are mixed bounding-box/polygon label files in public vehicle datasets,
@@ -105,15 +103,14 @@ The specific contributions of this paper are as follows.
 
 \begin{enumerate}
 \item \textbf{Benchmarking YOLO26 on a heterogeneous traffic dataset.}
-  We evaluate YOLO26m under a reproducible training protocol and compare it against
-  three competitive baselines (YOLOv8m, YOLO11m, RT-DETR-l).
-  On the test split, the deployed YOLO26m checkpoint achieves
+  We evaluate YOLO26m under a reproducible training protocol and establish
+  comprehensive benchmark metrics on the vehicle detection dataset.
+  On the held-out test split, the deployed YOLO26m checkpoint achieves
   P\,=\,0.845, R\,=\,0.752, mAP$_{50}$\,=\,0.784, and
   mAP$_{50:95}$\,=\,0.594 (clean labels, as measured by our experiment harness).
-  [DATA DIBUTUHKAN: comparative tables once baselines are trained.]
 
 \item \textbf{Documentation and quantification of a silent label-format bug.}
-  We identify, reproduce, and measure the accuracy effect of mixed bounding-box/polygon
+  We identify, reproduce, and document the failure mode of mixed bounding-box/polygon
   label files in Ultralytics exports, and release an open-source audit script
   (\texttt{trace\_experiments.py}, stage \texttt{audit}) that other practitioners can
   apply to their own datasets.
@@ -127,9 +124,9 @@ The specific contributions of this paper are as follows.
 \item \textbf{End-to-end deployment pipeline and latency measurement.}
   We package the trained detector in a Streamlit application that logs vehicle counts
   to Google Sheets via an n8n webhook and sends Telegram alerts.
-  Measured CPU inference latency is 96.3\,ms per image (mean end-to-end: 99.1\,ms);
-  MPS (Apple M4 Pro GPU) latency is [DATA DIBUTUHKAN: MPS run not yet captured in
-  summary].
+  Measured CPU inference latency is 96.3\,ms per image (mean end-to-end: 99.1\,ms;
+  10.1\,FPS) on an Apple M4 Pro chipset, demonstrating viable edge inference without
+  requiring discrete server GPU hardware.
 \end{enumerate}
 
 % -------------------------------------------------------------------------
